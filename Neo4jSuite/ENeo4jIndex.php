@@ -103,6 +103,14 @@ abstract class ENeo4jIndex extends EActiveResource
         $this->postRequest($this->name.'/'.urlencode($key).'/'.urlencode($value),$propertyContainer->self);
     }
 
+    public function deletePropertyContainerEntry($id)
+    {
+        if($id)
+            $this->deleteRequest($this->name.'/'.$id);
+        else
+            throw new ENeo4jException('Id cannot be null',500);
+    }
+
 }
 
 ?>

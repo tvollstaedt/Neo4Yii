@@ -26,11 +26,16 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
         return CMap::mergeArray(
                 $this->getGraphService()->rest(),
                 array(
-                    'idProperty'=>'id',
+                    'idProperty'=>'self',
                     'container'=>'data',
                 )
         );
     }
+
+    /**
+     * Used to name the modelindex for autoindexing
+     */
+    abstract public function getModelIndex();
 
     /**
      * After saving a node/relationship we want to add it to the index
@@ -262,7 +267,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
      * If no query is provided all property containers of the same modelclass will be loaded and the first will be returned
      * @return ENeo4jPropertyContainer returns single property container or null if none is found.
      */
-    public function find($query=null)
+    public function findByIndex($query=null)
     {
             Yii::trace(get_class($this).'.find()','ext.Neo4jSuite.ENeo4jPropertyContainer');
             $index=$index=$this->getModelIndex();;
@@ -298,7 +303,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
      * If no query is provided all property containers of the same modelclass will be loaded.
      * @return ENeo4jPropertyContainer returns an array of property containers or an empty array if none are found.
      */
-    public function findAll($query=null)
+    public function findAllByIndex($query=null)
     {
             Yii::trace(get_class($this).'.findAll()','ext.Neo4jSuite.ENeo4jPropertyContainer');
             $index=$index=$this->getModelIndex();
@@ -319,7 +324,6 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
                 $response=$index->exactLookup($this->getModelClassField(),get_class($this));
             return $response;
     }
-
 
     /**
      * Creates a property container (either node or relationship) with the given attributes.

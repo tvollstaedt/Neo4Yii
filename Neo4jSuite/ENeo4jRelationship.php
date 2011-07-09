@@ -77,25 +77,21 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             $this->autoIndex();
         }
 
-        foreach($this->getAttributes() as $attribute=>$value)
-        {
-                if(!is_array($value))
-                {
-                    //delete all old values first!!!
-                    if(!$this->getisNewResource())
-                        $index->deleteRequest($index->name.'/'.$attribute.'/'.$this->getId());
-                    $index->addToIndex($this,$attribute,$value);
-                }
-        }
+        $batchCommands=array();
 
-        if(!$this->getisNewResource())
-        {
-            $index->deleteRequest($index->name.'/'.$this->getId().'/'.$this->getId());
-            $index->deleteRequest($index->name.'/'.$this->type.'/'.$this->getId());
-        }
-        
-        $index->addToIndex($this,$this->idProperty(),$this->getId());
-        $index->addToIndex($this,'type',$this->type);
+        if($this->getIsNewResource())
+            $batchCommands[]=array('method'=>'DELETE','to'=>'/index/relationship/'.$index->name.'/'.$this->getId());
+
+                foreach($this->getAttributes() as $attribute=>$value)
+                {
+                    if(!is_array($value))
+                    {
+                        $batchCommands[]=array('method'=>'POST','to'=>'/index/relationship/'.$index->name.'/'.urlencode($attribute).'/'.urlencode($value),'body'=>$this->self);
+                    }
+                }
+
+        $batchCommands[]=array('method'=>'POST','to'=>'/index/relationship/'.$index->name.'/id/'.$this->getId(),'body'=>$this->self);
+        $this->getGraphService()->postRequest('batch',$batchCommands);
     }
 
     /**
