@@ -83,18 +83,18 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
                 {
                     //delete all old values first!!!
                     if(!$this->getisNewResource())
-                        $index->deleteRequest($index->name.'/'.$attribute.'/'.$this->self);
+                        $index->deleteRequest($index->name.'/'.$attribute.'/'.$this->getId());
                     $index->addToIndex($this,$attribute,$value);
                 }
         }
 
         if(!$this->getisNewResource())
         {
-            $index->deleteRequest($index->name.'/'.$this->getId().'/'.$this->self);
-            $index->deleteRequest($index->name.'/'.$this->type.'/'.$this->self);
+            $index->deleteRequest($index->name.'/'.$this->getId().'/'.$this->getId());
+            $index->deleteRequest($index->name.'/'.$this->type.'/'.$this->getId());
         }
         
-        $index->addToIndex($this,'id',$this->getId());
+        $index->addToIndex($this,$this->idProperty(),$this->getId());
         $index->addToIndex($this,'type',$this->type);
     }
 

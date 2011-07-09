@@ -26,7 +26,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
         return CMap::mergeArray(
                 $this->getGraphService()->rest(),
                 array(
-                    'idProperty'=>'self',
+                    'idProperty'=>'id',
                     'container'=>'data',
                 )
         );
@@ -205,7 +205,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
             Yii::trace(get_class($this).'.updateById()','ext.Neo4jSuite.ENeo4jPropertyContainer');
             $model=$this->findById($id);
             if($model)
-                $this->putRequest($id,$attributes,'/properties');
+                $model->putRequest($id,$attributes,'/properties');
             else
                 throw EActiveResourceException(Yii::t('ext.Neo4jSuite.ENeo4jPropertyContainer','The property container could not be found'));
     }
@@ -219,7 +219,14 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
             Yii::trace(get_class($this).'.deleteById()','ext.Neo4jSuite.ENeo4jPropertyContainer');
             $model=$this->findById($id);
             if($model)
-                $this->deleteRequest($id);
+                try
+                {
+                    $model->deleteRequest($id);
+                }
+                catch (EActiveResourceRequestException $e)
+                {
+                    throw new ENeo4jException('Could not delete property container. Check for existing relationships' , 500);
+                }
             else
                 throw EActiveResourceException(Yii::t('ext.Neo4jSuite.ENeo4jPropertyContainer','The property container could not be found'));
     }
