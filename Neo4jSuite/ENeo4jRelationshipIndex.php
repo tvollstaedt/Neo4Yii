@@ -80,7 +80,14 @@ class ENeo4jRelationshipIndex extends ENeo4jIndex
     public function query(ENeo4jLuceneQuery $query)
     {
         Yii::trace(get_class($this).'.queryIndex()','ext.Neo4jSuite.ENeo4jRelationshipIndex');
-        return ENeo4jRelationship::model()->populateRecords($this->getRequest($this->name.'?query='.$query->getQueryString()));
+        try
+        {
+            return ENeo4jRelationship::model()->populateRecords($this->getRequest($this->name.'?query='.$query->getQueryString()));
+        }
+        catch (EActiveResourceException $e)
+        {
+            throw new ENeo4jException('Error querying relationship index. Check the syntax');
+        }
     }
 
 

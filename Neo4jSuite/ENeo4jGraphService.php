@@ -10,21 +10,24 @@
  * All parameters used in rest() are used by the classes extending ENeo4jPropertyContainer and ENeo4jIndex so don't
  * mess around with it unless you know what you are doing
  */
-class ENeo4jGraphService extends EActiveResource
+class ENeo4jGraphService extends CApplicationComponent
 {
+    public $host;
+    public $port;
+    public $database;
 
     public function rest()
     {
         return array(
-            'site'=>'http://localhost:7474/db/data',
+            'site'=>$this->host.':'.$this->port.'/'.$this->database,
             'contenttype'=>'application/json',
             'accepttype'=>'application/json',
         );
     }
 
-    public static function model($className=__CLASS__)
+    public function createBatchTransaction()
     {
-        return parent::model($className);
+        return new ENeo4jBatchTransaction;
     }
     
 }

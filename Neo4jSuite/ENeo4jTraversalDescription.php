@@ -91,6 +91,11 @@ class ENeo4jTraversalDescription
             return $this->_returntype;
         }
 
+        public function setOrder($order)
+        {
+            $this->_order=$order;
+        }
+
         /**
          * Setter for _returntype
          * @param string $returntype The returntype to set

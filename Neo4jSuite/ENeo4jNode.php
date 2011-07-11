@@ -13,6 +13,8 @@
 class ENeo4jNode extends ENeo4jPropertyContainer
 {
 
+    private static $_modelIndex;
+
     public static function model($className=__CLASS__)
     {
         return parent::model($className);
@@ -30,21 +32,34 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         );
     }
 
+    public function getModelIndex()
+    {
+        if(isset(self::$_modelIndex))
+            return self::$_modelIndex;
+        else
+            return self::$_modelIndex=$this->createModelIndex();
+    }
+
     /**
      * Defines the name of the index used for autoIndexing. Oerwrite if you wanna use a customized index
      * @return string The name of the index for autoIndexing
      */
     public function getModelIndexName()
     {
-        return 'node_auto_index';
+        return 'Yii_node_autoindex';
     }
 
-   public function getModelIndex()
+    public function createModelIndex()
     {
-        if(isset($this->autoIndexModel))
-            return $this->autoIndexModel;
-        else
-            return $this->autoIndexModel=ENeo4jNodeIndex::model()->findbyId($this->getModelIndexName());
+        $index=new ENeo4jNodeIndex;
+        $index->name=$this->getModelIndexName();
+        $index->config=array(
+            'provider'=>'lucene',
+            'type'=>'fulltext',
+        );
+        $index->save();
+
+        return $index;
     }
     /**
      * This method indexes a node and all its attributes. The index used is specified in getModelIndexName() and defaults
@@ -55,38 +70,23 @@ class ENeo4jNode extends ENeo4jPropertyContainer
      */
     public function autoIndex()
     {
-        //don't worry if the index doesn't exist. We'll create one
-        try
-        {
-            $index=$this->getModelIndex();
-        }
-        catch(EActiveResourceRequestNotFoundException $e)
-        {
-            $index=new ENeo4jNodeIndex;
-            $index->name=$this->getModelIndexName();
-            $index->config=array(
-                'provider'=>'lucene',
-                'type'=>'fulltext',
-            );
-            $index->save();
-            $this->autoIndex();
-        }
 
+        $index=$this->getModelIndex();
+        
         $batchCommands=array();
 
-        if($this->getIsNewResource())
+        if(!$this->getIsNewResource())
             $batchCommands[]=array('method'=>'DELETE','to'=>'/index/node/'.$index->name.'/'.$this->getId());
 
-                foreach($this->getAttributes() as $attribute=>$value)
-                {
-                    if(!is_array($value))
-                    {
-                        $batchCommands[]=array('method'=>'POST','to'=>'/index/node/'.$index->name.'/'.urlencode($attribute).'/'.urlencode($value),'body'=>$this->self);
-                    }
-                }
-
-        $batchCommands[]=array('method'=>'POST','to'=>'/index/node/'.$index->name.'/id/'.$this->getId(),'body'=>$this->self);
-        $this->getGraphService()->postRequest('batch',$batchCommands);
+        foreach($this->getAttributes() as $attribute=>$value)
+        {
+            if(!is_array($value))
+            {
+                $batchCommands[]=array('method'=>'POST','to'=>'/index/node/'.$index->name.'/'.urlencode($attribute).'/'.urlencode($value),'body'=>'{'.$this->batchId.'}');
+            }
+        }
+        
+        return $batchCommands;
     }
 
     /**
@@ -102,7 +102,15 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         {
             Yii::trace(get_class($this).'.create()','ext.Neo4jSuite.ENeo4jNode');
 
-            $returnedmodel=$this->populateRecord($this->postRequest(null,$this->getAttributes()));
+            //open a transaction for insert AND autoindexing
+            $transaction=Yii::app()->neo4jSuite->createBatchTransaction();
+
+            //send by reference, because we want to assign a batch id!
+            $transaction->addSaveOperation($this);
+            
+            $response=$transaction->execute();
+
+            $returnedmodel=$this->populateRecord($response[0]['body']);
 
             if($returnedmodel)
             {

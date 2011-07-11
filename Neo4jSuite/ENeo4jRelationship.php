@@ -14,8 +14,10 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     public $start; //start uri
     public $end; //end uri
     public $type;
-    private $_startNode; //a container for the startNode object. Lazily loaded via __get()
-    private $_endNode; //a container for the endNode object. Lazily loaded via __get()
+    private $startNode; //a container for the startNode object. Lazily loaded via __get()
+    private $endNode; //a container for the endNode object. Lazily loaded via __get()
+
+    private static $_modelIndex;
 
     public static function model($className=__CLASS__)
     {
@@ -34,21 +36,34 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         );
     }
 
+    public function getModelIndex()
+    {
+        if(isset(self::$_modelIndex))
+            return self::$_modelIndex;
+        else
+            return self::$_modelIndex=$this->createModelIndex();
+    }
+
     /**
      * Defines the name of the index used for autoIndexing. Oerwrite if you wanna use a customized index
      * @return string The name of the index for autoIndexing
      */
     public function getModelIndexName()
     {
-        return 'relationship_auto_index';
+        return 'Yii_relationship_autoindex';
     }
 
-    public function getModelIndex()
+    public function createModelIndex()
     {
-        if(isset($this->autoIndexModel))
-            return $this->autoIndexModel;
-        else
-            return $this->autoIndexModel=ENeo4jRelationshipIndex::model()->findbyId($this->getModelIndexName());
+        $index=new ENeo4jRelationshipIndex;
+        $index->name=$this->getModelIndexName();
+        $index->config=array(
+            'provider'=>'lucene',
+            'type'=>'fulltext',
+        );
+        $index->save();
+
+        return $index;
     }
     
     /**
@@ -60,38 +75,26 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function autoIndex()
     {
-        //don't worry if the index doesn't exist. We'll create one
-        try
-        {
-            $index=$this->getModelIndex();
-        }
-        catch(EActiveResourceRequestNotFoundException $e)
-        {
-            $index=new ENeo4jRelationshipIndex;
-            $index->name=$this->getModelIndexName();
-            $index->config=array(
-                'provider'=>'lucene',
-                'type'=>'fulltext',
-            );
-            $index->save();
-            $this->autoIndex();
-        }
+        
+        $index=$this->getModelIndex();
 
         $batchCommands=array();
 
-        if($this->getIsNewResource())
+        if(!$this->getIsNewResource())
             $batchCommands[]=array('method'=>'DELETE','to'=>'/index/relationship/'.$index->name.'/'.$this->getId());
 
-                foreach($this->getAttributes() as $attribute=>$value)
-                {
-                    if(!is_array($value))
-                    {
-                        $batchCommands[]=array('method'=>'POST','to'=>'/index/relationship/'.$index->name.'/'.urlencode($attribute).'/'.urlencode($value),'body'=>$this->self);
-                    }
-                }
+        foreach($this->getAttributes() as $attribute=>$value)
+        {
+            if($value instanceof ENeo4jNode)throw new CException(print_r($attribute));
+            if(!is_array($value))
+            {
+                $batchCommands[]=array('method'=>'POST','to'=>'/index/relationship/'.$index->name.'/'.urlencode($attribute).'/'.urlencode($value),'body'=>'{'.$this->batchId.'}');
+            }
+        }
 
-        $batchCommands[]=array('method'=>'POST','to'=>'/index/relationship/'.$index->name.'/id/'.$this->getId(),'body'=>$this->self);
-        $this->getGraphService()->postRequest('batch',$batchCommands);
+        //also add the type of the relationship which isn't a property
+        $batchCommands[]=array('method'=>'POST','to'=>'/index/relationship/'.$index->name.'/type/'.urlencode($this->type),'body'=>'{'.$this->batchId.'}');
+        return $batchCommands;
     }
 
     /**
@@ -107,8 +110,19 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             return parent::__get($name);
     }
 
+    public function __set($name,$value)
+    {
+        if($name=='startNode')
+            $this->startNode=$value;
+        if ($name=='endNode')
+            $this->endNode=$value;
+        else
+            parent::__get($name);
+    }
+    
     /**
      * Relationships are created differently to nodes, so we override the ActiveResource method here.
+     * CAUTION: This is a transactional method, meaning that creating and indexing are done via a ENeo4jBatchTransaction
      * @param array $attributes The attributes to be used when creating the relationship
      * @return boolean true on success, false on failure
      */
@@ -125,16 +139,14 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         {
             Yii::trace(get_class($this).'.create()','ext.Neo4jSuite.ENeo4jRelationship');
 
-            $uri=$this->startNode->getSite().'/'.$this->startNode->getResource().'/'.$this->startNode->getId().'/relationships';
-            $returnedmodel=$this->populateRecord($this->customPostRequest(
-                $uri,
-                array(
-                    'to'=>$this->endNode->self,
-                    'data'=>$this->getAttributes(),
-                    'type'=>$this->type
-                    )
-                )
-            );
+            $transaction=Yii::app()->neo4jSuite->createBatchTransaction();
+
+            //send by reference, because we want to assign a batchId!
+            $transaction->addSaveOperation($this);
+
+            $response=$transaction->execute();
+
+            $returnedmodel=$this->populateRecord($response[0]['body']);
 
             if($returnedmodel)
             {
@@ -152,21 +164,21 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     }
 
     /**
-     * Sets the start node object
-     * @param ENeo4jNode $startnode
+     * Setter for the startNode object
+     * @param ENeo4jNode $node
      */
-    public function setStartNode(ENeo4jNode $startnode)
+    public function setStartNode(ENeo4jNode $node)
     {
-        $this->_startNode=$startnode;
+        $this->startNode=$node;
     }
 
     /**
-     * Sets the end node object
-     * @param ENeo4jNode $endnode
+     * Setter for the endNode object
+     * @param ENeo4jNode $node
      */
-    public function setEndNode(ENeo4jNode $endnode)
+    public function setEndNode(ENeo4jNode $node)
     {
-        $this->_endNode=$endnode;
+        $this->endNode=$node;
     }
 
     /**
@@ -175,10 +187,13 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function getStartNode()
     {
-        if(isset($this->_startNode))
-            return $this->_startNode;
+        if(isset($this->startNode))
+            return $this->startNode;
         else
-            return $this->_startNode=ENeo4jNode::model()->populateRecord(ENeo4jNode::model()->getRequest(end(explode('/',$this->start))));
+        {
+            Yii::trace(get_class($this).' is lazyLoading startNode','ext.Neo4jSuite.ENeo4jRelationship');
+            return $this->startNode=ENeo4jNode::model()->populateRecord(ENeo4jNode::model()->getRequest(end(explode('/',$this->start))));
+        }
     }
 
     /**
@@ -187,10 +202,13 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function getEndNode()
     {
-        if(isset($this->_endNode))
-            return $this->_endNode;
+        if(isset($this->endNode))
+            return $this->endNode;
         else
-            return $this->_endNode=ENeo4jNode::model()->populateRecord(ENeo4jNode::model()->getRequest(end(explode('/',$this->end))));
+        {
+            Yii::trace(get_class($this).' is lazyLoading endNode','ext.Neo4jSuite.ENeo4jRelationship');
+            return $this->endNode=ENeo4jNode::model()->populateRecord(ENeo4jNode::model()->getRequest(end(explode('/',$this->end))));
+        }
     }
 
 }

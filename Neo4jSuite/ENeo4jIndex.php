@@ -42,7 +42,7 @@ abstract class ENeo4jIndex extends EActiveResource
         if(isset($this->_graphService))
                 return $this->_graphService;
         else
-            return new ENeo4jGraphService;
+            return $this->_graphService=Yii::app()->neo4jSuite;
     }
 
     /**
@@ -75,6 +75,8 @@ abstract class ENeo4jIndex extends EActiveResource
     {
             Yii::trace(get_class($this).'.findById()','ext.Neo4jSuite.ENeo4jIndex');
             $allindices=$this->getRequest();
+            if(!$allindices)
+                throw new EActiveResourceRequestNotFoundException ("Index $indexname not found");
             if(array_key_exists($indexname,$allindices))
                 return $this->populateRecord(CMap::mergeArray(array('name'=>$indexname),$allindices[$indexname]));
             else

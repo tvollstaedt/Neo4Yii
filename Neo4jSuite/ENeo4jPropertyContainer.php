@@ -13,7 +13,8 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
 {    
     public $self; //always contains the full uri. If you need the id use getId() instead.
     public $autoIndexing=true; //true by default, meaning all attributes (especially the modelclass attribute) will automatically indexed
-    public $autoIndexModel; //the index object
+    
+    public $batchId; //this is used when using the ENeo4jBatchTransaction. Each property container gets an id to be uniquely identified
 
     private $_graphService; //The graphService all nodes or relationships belong to.
     
@@ -32,19 +33,17 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
         );
     }
 
+    public function assignBatchId($id)
+    {
+        $this->batchId=$id;
+    }
+
     /**
      * Used to name the modelindex for autoindexing
      */
     abstract public function getModelIndex();
 
-    /**
-     * After saving a node/relationship we want to add it to the index
-     */
-    public function afterSave() {
-        if($this->autoIndexing)
-            $this->autoIndex();
-        parent::afterSave();
-    }
+    abstract public function createModelIndex();
 
     /**
      * Inits the model and sets the modelclassfield so that the model can be instantiated properly.
@@ -64,7 +63,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
         if(isset($this->_graphService))
                 return $this->_graphService;
         else
-            return new ENeo4jGraphService;
+            return $this->_graphService=Yii::app()->neo4jSuite;
     }
 
     /**
@@ -210,7 +209,14 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
             Yii::trace(get_class($this).'.updateById()','ext.Neo4jSuite.ENeo4jPropertyContainer');
             $model=$this->findById($id);
             if($model)
-                $model->putRequest($id,$attributes,'/properties');
+            {
+                foreach($attributes as $key=>$value)
+                    $model->$key=$value;
+                //we need a transaction to update the model AND the index
+                $transaction=Yii::app()->neo4jSuite->createBatchTransaction();
+                $transaction->addUpdateOperation($model);
+                $transaction->execute();
+            }
             else
                 throw EActiveResourceException(Yii::t('ext.Neo4jSuite.ENeo4jPropertyContainer','The property container could not be found'));
     }
@@ -244,20 +250,19 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
     public function findById($id)
     {
             Yii::trace(get_class($this).'.findById()','ext.Neo4jSuite.ENeo4jPropertyContainer');
-
-            $index=$this->getModelIndex();
-
-            $query=new ENeo4jLuceneQuery;
-
-            $query->addStatement('id:'.$id,'AND');
-            $query->addStatement($this->getModelClassField().':'.get_class($this),'AND');
-
-            $response=$index->query($query);
-
-            if($response)
-                return $response[0];
-            else
-                throw new EActiveResourceRequestNotFoundException('Node not found', 404);
+            try
+            {
+                $modelclass=$this->getRequest($id.'/properties/'.$this->getModelClassField());
+                if($modelclass==get_class($this))
+                    return $this->populateRecord($this->getRequest($id));
+                else
+                    throw new EActiveResourceRequestForbiddenException("Cannot map $modelclass entry to ".get_class($this));
+            }
+            catch(EActiveResourceRequestNotFoundException $e)
+            {
+                throw new EActiveResourceRequestNotFoundException('Node/relationship not found', 404);
+            }
+            
 
     }
 

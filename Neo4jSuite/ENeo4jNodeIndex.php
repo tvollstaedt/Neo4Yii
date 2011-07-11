@@ -70,7 +70,14 @@ class ENeo4jNodeIndex extends ENeo4jIndex
     public function query(ENeo4jLuceneQuery $query)
     {
         Yii::trace(get_class($this).'.queryIndex()','ext.Neo4jSuite.ENeo4jNodeIndex');
-        return ENeo4jNode::model()->populateRecords($this->getRequest($this->name.'?query='.$query->getQueryString()));
+        try
+        {
+            return ENeo4jNode::model()->populateRecords($this->getRequest($this->name.'?query='.$query->getQueryString()));
+        }
+        catch (EActiveResourceException $e)
+        {
+            throw new ENeo4jException('Error querying the node index. Check the syntax');
+        }
     }
 
 
