@@ -63,7 +63,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
         if(isset($this->_graphService))
                 return $this->_graphService;
         else
-            return $this->_graphService=Yii::app()->neo4jSuite;
+            return $this->_graphService=new ENeo4jGraphService;
     }
 
     /**
@@ -213,7 +213,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
                 foreach($attributes as $key=>$value)
                     $model->$key=$value;
                 //we need a transaction to update the model AND the index
-                $transaction=Yii::app()->neo4jSuite->createBatchTransaction();
+                $transaction=$this->getGraphService()->createBatchTransaction();
                 $transaction->addUpdateOperation($model);
                 $transaction->execute();
             }
@@ -236,98 +236,8 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
                 }
                 catch (EActiveResourceRequestException $e)
                 {
-                    throw new ENeo4jException('Could not delete property container. Check for existing relationships' , 500);
+                    throw new ENeo4jException('Could not delete property container. Check for existing relationships');
                 }
-            else
-                throw EActiveResourceException(Yii::t('ext.Neo4jSuite.ENeo4jPropertyContainer','The property container could not be found'));
-    }
-
-    /**
-     * Finds a single property container with the specified id within the modelclass index.
-     * @param mixed $id The id.
-     * @return ENeo4jPropertyContainer the property container found. Null if none is found.
-     */
-    public function findById($id)
-    {
-            Yii::trace(get_class($this).'.findById()','ext.Neo4jSuite.ENeo4jPropertyContainer');
-            try
-            {
-                $modelclass=$this->getRequest($id.'/properties/'.$this->getModelClassField());
-                if($modelclass==get_class($this))
-                    return $this->populateRecord($this->getRequest($id));
-                else
-                    throw new EActiveResourceRequestForbiddenException("Cannot map $modelclass entry to ".get_class($this));
-            }
-            catch(EActiveResourceRequestNotFoundException $e)
-            {
-                throw new EActiveResourceRequestNotFoundException('Node/relationship not found', 404);
-            }
-            
-
-    }
-
-    /**
-     * Overrides the ActiveResource method in order to query the property container index for models of the calling finder class
-     * To only get back property containers of the same class as the finder instance we have to always add a query for the modelclass attribute
-     * If no query is provided all property containers of the same modelclass will be loaded and the first will be returned
-     * @return ENeo4jPropertyContainer returns single property container or null if none is found.
-     */
-    public function findByIndex($query=null)
-    {
-            Yii::trace(get_class($this).'.find()','ext.Neo4jSuite.ENeo4jPropertyContainer');
-            $index=$index=$this->getModelIndex();;
-            if($query!=false)
-            {
-                if($query instanceof ENeo4jLuceneQuery)
-                {
-                    $query->addStatement($this->getModelClassField().':'.get_class($this),'AND');
-                    $response=$index->query($query);
-                }
-                else if(is_string($query))
-                {
-                    $queryobject=new ENeo4jLuceneQuery;
-                    $queryobject->setQueryString($query);
-                    $queryobject->addStatement($this->getModelClassField().':'.get_class($this),'AND');
-
-                    $response=$index->query($queryobject);
-                }
-            }
-            else
-                $response=$index->exactLookup($this->getModelClassField(),get_class($this));
-
-            if(isset($response[0]))
-                return $response[0];
-            else
-                return null;
-    }
-
-
-    /**
-     * Overrides the ActiveResource method in order to query the property container index for all models of the calling finder class
-     * To only get back property containers of the same class as the finder instance we have to always add a query for the modelclass attribute
-     * If no query is provided all property containers of the same modelclass will be loaded.
-     * @return ENeo4jPropertyContainer returns an array of property containers or an empty array if none are found.
-     */
-    public function findAllByIndex($query=null)
-    {
-            Yii::trace(get_class($this).'.findAll()','ext.Neo4jSuite.ENeo4jPropertyContainer');
-            $index=$index=$this->getModelIndex();
-            if($query instanceof ENeo4jLuceneQuery)
-                {
-                    $query->addStatement(array($this->getModelClassField(),array('AND',get_class($this))));
-                    $response=$index->query($query);
-                }
-                else if(is_string($query))
-                {
-                    $queryobject=new ENeo4jLuceneQuery;
-                    $queryobject->setQueryString($query);
-                    $queryobject->addStatement($this->getModelClassField().':'.get_class($this),'AND');
-
-                    $response=$index->query($queryobject);
-                }
-            else
-                $response=$index->exactLookup($this->getModelClassField(),get_class($this));
-            return $response;
     }
 
     /**

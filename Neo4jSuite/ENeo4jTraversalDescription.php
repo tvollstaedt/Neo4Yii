@@ -11,8 +11,8 @@
 class ENeo4jTraversalDescription
 {
 
-        const BREADTH_FIRST = 'breadth first';
-	const DEPTH_FIRST = 'depth first';
+        const BREADTH_FIRST = 'breadth_first';
+	const DEPTH_FIRST = 'depth_first';
 
 	const RETURN_NODES = "node";
 	const RETURN_RELATIONSHIPS = "relationship";
@@ -33,14 +33,14 @@ class ENeo4jTraversalDescription
 	private $_maxDepth;
 
         private static $_allowedOptions=array(
-            'startnode'         =>'_startnode',
-            'returntype'        =>'_returntype',
+            'startNode'         =>'_startnode',
+            'returnType'        =>'_returntype',
             'order'             =>'_order',
             'uniqueness'        =>'_uniqueness',
             'relationships'     =>'_relationships',
-            'prune evaluator'   =>'_pruneEvaluator',
-            'return filter'     =>'_returnFilter',
-            'max depth'         =>'_maxDepth',
+            'pruneEvaluator'   =>'_pruneEvaluator',
+            'returnFilter'     =>'_returnFilter',
+            'maxDepth'         =>'_maxDepth',
         );
 
         public function __construct()
@@ -151,7 +151,7 @@ class ENeo4jTraversalDescription
 	public function setPruneEvaluator($language, $body) {
 		$this->_pruneEvaluator['language'] = $language;
 		$this->_pruneEvaluator['body'] = $body;
-		$this->_traversalDescription['prune evaluator'] = $this->_pruneEvaluator;
+		$this->_traversalDescription['prune_evaluator'] = $this->_pruneEvaluator;
 	}
 
         /**
@@ -162,7 +162,7 @@ class ENeo4jTraversalDescription
 	public function setReturnFilter($language, $body) {
 		$this->_returnFilter['language'] = $language;
 		$this->_returnFilter['body'] = $body;
-		$this->_traversalDescription['return filter'] = $this->_returnFilter;
+		$this->_traversalDescription['return_filter'] = $this->_returnFilter;
 	}
 
         /**
@@ -182,7 +182,7 @@ class ENeo4jTraversalDescription
          */
 	public function setMaxDepth($depth) {
 		$this->_maxDepth = $depth;
-		$this->_traversalDescription['max depth'] = $this->_maxDepth;
+		$this->_traversalDescription['max_depth'] = $this->_maxDepth;
 	}
 
         /**

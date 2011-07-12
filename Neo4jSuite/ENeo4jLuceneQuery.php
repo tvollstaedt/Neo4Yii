@@ -47,7 +47,12 @@ class ENeo4jLuceneQuery
      */
     public function getQueryString()
     {
-        return urlencode($this->_query);
+        return urlencode($this->getRawQueryString());
+    }
+
+    public function getRawQueryString()
+    {
+        return $this->_query;
     }
 
 }

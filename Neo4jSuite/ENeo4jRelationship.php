@@ -14,8 +14,8 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     public $start; //start uri
     public $end; //end uri
     public $type;
-    private $startNode; //a container for the startNode object. Lazily loaded via __get()
-    private $endNode; //a container for the endNode object. Lazily loaded via __get()
+    private $_startNode; //a container for the startNode object. Lazily loaded via __get()
+    private $_endNode; //a container for the endNode object. Lazily loaded via __get()
 
     private static $_modelIndex;
 
@@ -112,12 +112,13 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
 
     public function __set($name,$value)
     {
+        
         if($name=='startNode')
-            $this->startNode=$value;
-        if ($name=='endNode')
-            $this->endNode=$value;
+            $this->_startNode=$value;
+        else if ($name=='endNode')
+            $this->_endNode=$value;
         else
-            parent::__get($name);
+            parent::__set($name,$value);
     }
     
     /**
@@ -139,7 +140,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         {
             Yii::trace(get_class($this).'.create()','ext.Neo4jSuite.ENeo4jRelationship');
 
-            $transaction=Yii::app()->neo4jSuite->createBatchTransaction();
+            $transaction=$this->getGraphService()->createBatchTransaction();
 
             //send by reference, because we want to assign a batchId!
             $transaction->addSaveOperation($this);
@@ -164,12 +165,104 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     }
 
     /**
+     * Finds a single relationship with the specified id. Other than the node findById() method this method
+     * currently uses 2 requests. One to determine if the relationship is of the same class as the finder and the second
+     * to actually query for the relationship.
+     * @param mixed $id The id.
+     * @return ENeo4jRelationship the relationship found. Null if none is found.
+     */
+    public function findById($id)
+    {
+            Yii::trace(get_class($this).'.findById()','ext.Neo4jSuite.ENeo4jRelationship');
+            try
+            {
+                //this is super ugly but there is no easy way to use Cypher, so use 2 classic requests, one for the modelclass property and then for the relationship
+                $modelclass=$this->getRequest($id.'/properties/'.$this->getModelClassField());
+                if($modelclass==get_class($this))
+                    return $this->populateRecord($this->getRequest($id));
+                else
+                    return null; //the id was found, but isn't of the same class as the finder
+            }
+            catch(EActiveResourceRequestNotFoundException $e)
+            {
+                return null;
+            }
+    }
+
+    /**
+     * Finds a single relationship using a Lucene query. CAUTION: this method is implemented using
+     * a standard Lucene query that can't currently be limited. That means that your query can return a large
+     * number of results while only the first result in the array will be returned. The problem is that this could
+     * be very exhaustive for the server, so use with taste.
+     * @param mixed $query The lucene query. Can either be a ENeo4jLuceneQuery object or a string.
+     * @return ENeo4jRelationship returns single relationship or null if none is found.
+     */
+    public function findByIndex($query=null)
+    {
+            Yii::trace(get_class($this).'.find()','ext.Neo4jSuite.ENeo4jRelationship');
+            $index=$index=$this->getModelIndex();;
+            if($query!=false)
+            {
+                if($query instanceof ENeo4jLuceneQuery)
+                {
+                    $query->addStatement($this->getModelClassField().':'.get_class($this),'AND');
+                    $response=$index->query($query);
+                }
+                else if(is_string($query))
+                {
+                    $queryobject=new ENeo4jLuceneQuery;
+                    $queryobject->setQueryString($query);
+                    $queryobject->addStatement($this->getModelClassField().':'.get_class($this),'AND');
+
+                    $response=$index->query($queryobject);
+                }
+            }
+            else
+                $response=$index->exactLookup($this->getModelClassField(),get_class($this));
+
+            if(isset($response[0]))
+                return $response[0];
+            else
+                return null;
+    }
+
+
+    /**
+     * Finds relationships using a Lucene query. CAUTION: this method is implemented using
+     * a standard Lucene query that can't currently be limited. That means that your query can return a large
+     * number of results. This could be very exhaustive for the server, so use with taste.
+     * @param mixed $query The lucene query. Can either be a ENeo4jLuceneQuery object or a string.
+     * @return array returns an array of ENeo4jRelationships or null if none is found
+     */
+    public function findAllByIndex($query=null)
+    {
+            Yii::trace(get_class($this).'.findAll()','ext.Neo4jSuite.ENeo4jPropertyRelationship');
+            $index=$index=$this->getModelIndex();
+            if($query instanceof ENeo4jLuceneQuery)
+                {
+                    $query->addStatement(array($this->getModelClassField(),array('AND',get_class($this))));
+                    $response=$index->query($query);
+                }
+                else if(is_string($query))
+                {
+                    $queryobject=new ENeo4jLuceneQuery;
+                    $queryobject->setQueryString($query);
+                    $queryobject->addStatement($this->getModelClassField().':'.get_class($this),'AND');
+
+                    $response=$index->query($queryobject);
+                }
+            else
+                $response=$index->exactLookup($this->getModelClassField(),get_class($this));
+            return $response;
+    }
+
+    /**
      * Setter for the startNode object
      * @param ENeo4jNode $node
      */
     public function setStartNode(ENeo4jNode $node)
     {
-        $this->startNode=$node;
+        $this->_startNode=$node;
     }
 
     /**
@@ -178,7 +271,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function setEndNode(ENeo4jNode $node)
     {
-        $this->endNode=$node;
+        $this->_endNode=$node;
     }
 
     /**
@@ -187,12 +280,12 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function getStartNode()
     {
-        if(isset($this->startNode))
-            return $this->startNode;
+        if(isset($this->_startNode))
+            return $this->_startNode;
         else
         {
             Yii::trace(get_class($this).' is lazyLoading startNode','ext.Neo4jSuite.ENeo4jRelationship');
-            return $this->startNode=ENeo4jNode::model()->populateRecord(ENeo4jNode::model()->getRequest(end(explode('/',$this->start))));
+            return $this->_startNode=ENeo4jNode::model()->populateRecord(ENeo4jNode::model()->getRequest(end(explode('/',$this->start))));
         }
     }
 
@@ -202,12 +295,12 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function getEndNode()
     {
-        if(isset($this->endNode))
-            return $this->endNode;
+        if(isset($this->_endNode))
+            return $this->_endNode;
         else
         {
             Yii::trace(get_class($this).' is lazyLoading endNode','ext.Neo4jSuite.ENeo4jRelationship');
-            return $this->endNode=ENeo4jNode::model()->populateRecord(ENeo4jNode::model()->getRequest(end(explode('/',$this->end))));
+            return $this->_endNode=ENeo4jNode::model()->populateRecord(ENeo4jNode::model()->getRequest(end(explode('/',$this->end))));
         }
     }
 

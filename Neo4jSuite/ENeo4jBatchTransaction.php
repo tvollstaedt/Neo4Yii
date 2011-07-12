@@ -29,7 +29,7 @@ class ENeo4jBatchTransaction extends EActiveResource
         if(isset($this->_graphService))
                 return $this->_graphService;
         else
-            return $this->_graphService=Yii::app()->getComponent('neo4jSuite');
+            return $this->_graphService=new ENeo4jGraphService;
     }
 
     /**
@@ -78,22 +78,29 @@ class ENeo4jBatchTransaction extends EActiveResource
                 //otherwise this isn't an overall transaction (nodes were created before and can't be referenced with {id})!!
                 $startBatch=$propertyContainer->startNode->batchId;
                 $endBatch=$propertyContainer->endNode->batchId;
-                
+
                 if(isset($startBatch) && isset($endBatch))
                     $this->operations[]=array(
                         'method'=>'POST',
                         'to'=>'{'.$propertyContainer->getStartNode()->batchId.'}/relationships',
-                        'body'=>array('to'=>'{'.$propertyContainer->getEndNode()->batchId.'}','type'=>$propertyContainer->type),
-                        'id'=>$propertyContainer->batchId,
-                    );
+                        'body'=>array(
+                            'to'=>'{'.$propertyContainer->getEndNode()->batchId.'}',
+                            'type'=>$propertyContainer->type,
+                            'data'=>$propertyContainer->getAttributes(),
+                        ),
+                        'id'=>$propertyContainer->batchId,);
 
                 else
                     $this->operations[]=array(
                         'method'=>'POST',
                         'to'=>'/node/'.$propertyContainer->getStartNode()->getId().'/relationships',
-                        'body'=>array('to'=>'/'.$propertyContainer->getResource().'/'.$propertyContainer->getEndNode()->getId(),'type'=>$propertyContainer->type),
+                        'body'=>array(
+                            'to'=>$propertyContainer->endNode->self,
+                            'type'=>$propertyContainer->type,
+                            'data'=>$propertyContainer->getAttributes(),
+                        ),
                         'id'=>$propertyContainer->batchId,
-                    );
+                        );
                 
             break;
 

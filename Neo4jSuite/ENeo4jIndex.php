@@ -42,7 +42,7 @@ abstract class ENeo4jIndex extends EActiveResource
         if(isset($this->_graphService))
                 return $this->_graphService;
         else
-            return $this->_graphService=Yii::app()->neo4jSuite;
+            return $this->_graphService=new ENeo4jGraphService;
     }
 
     /**

@@ -90,6 +90,110 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     }
 
     /**
+     * Finds a single property container with the specified id within the modelclass index.
+     * @param mixed $id The id.
+     * @return ENeo4jPropertyContainer the property container found. Null if none is found.
+     */
+    public function findById($id)
+    {
+            Yii::trace(get_class($this).'.findById()','ext.Neo4jSuite.ENeo4jNode');
+            $query="start x=(".$id.") where x.".$this->getModelClassField()."='".get_class($this)."' return x";
+            $response=$this->getGraphService()->queryByCypher($query);
+            if(isset($response['data'][0][0]))
+                return $this->populateRecord($response['data'][0][0]);
+            else
+                return null;
+    }
+
+    /**
+     * Overrides the ActiveResource method in order to query the property container index for models of the calling finder class
+     * To only get back property containers of the same class as the finder instance we have to always add a query for the modelclass attribute
+     * If no query is provided all property containers of the same modelclass will be loaded and the first will be returned
+     * @return ENeo4jPropertyContainer returns single property container or null if none is found.
+     */
+    public function findByIndex($query=null)
+    {
+            Yii::trace(get_class($this).'.find()','ext.Neo4jSuite.ENeo4jNode');
+
+            if($query!=false)
+            {
+                if($query instanceof ENeo4jLuceneQuery)
+                {
+                    $query->addStatement($this->getModelClassField().':'.get_class($this),'AND');
+                    $queryobject=$query;
+                }
+                else if(is_string($query))
+                {
+                    $queryobject=new ENeo4jLuceneQuery;
+                    $queryobject->setQueryString($query);
+                    $queryobject->addStatement($this->getModelClassField().':'.get_class($this),'AND');
+                }
+            }
+            else
+            {
+                $queryobject=new ENeo4jLuceneQuery;
+                $queryobject->addStatement($this->getModelClassField().':'.get_class($this),'AND');
+            }
+
+            $cypherquery='start x=('.$this->getModelIndexName().',"'.$queryobject->getRawQueryString().'") return x limit 1';
+            $response=$this->getGraphService()->queryByCypher($cypherquery);
+
+            if(isset($response['data'][0][0]))
+                return $this->populateRecord($response['data'][0][0]);
+            else
+                return null;
+    }
+
+
+    /**
+     * Overrides the ActiveResource method in order to query the property container index for all models of the calling finder class
+     * To only get back property containers of the same class as the finder instance we have to always add a query for the modelclass attribute
+     * If no query is provided all property containers of the same modelclass will be loaded.
+     * @return ENeo4jPropertyContainer returns an array of property containers or an empty array if none are found.
+     */
+    public function findAllByIndex($query=null,$limit=null)
+    {
+            Yii::trace(get_class($this).'.findAll()','ext.Neo4jSuite.ENeo4jNode');
+            
+            if($query!=false)
+            {
+                if($query instanceof ENeo4jLuceneQuery)
+                {
+                    $query->addStatement($this->getModelClassField().':'.get_class($this),'AND');
+                    $queryobject=$query;
+                }
+                else if(is_string($query))
+                {
+                    $queryobject=new ENeo4jLuceneQuery;
+                    $queryobject->setQueryString($query);
+                    $queryobject->addStatement($this->getModelClassField().':'.get_class($this),'AND');
+                }
+            }
+            else
+            {
+                $queryobject=new ENeo4jLuceneQuery;
+                $queryobject->addStatement($this->getModelClassField().':'.get_class($this),'AND');
+            }
+
+            if($limit)
+                $cypherquery='start x=('.$this->getModelIndexName().',"'.$queryobject->getRawQueryString().'") return x limit '.$limit;
+            else
+                $cypherquery='start x=('.$this->getModelIndexName().',"'.$queryobject->getRawQueryString().'") return x';
+            $response=$this->getGraphService()->queryByCypher($cypherquery);
+
+            $models=array();
+
+            if(isset($response['data'][0][0]))
+            {
+                foreach($response['data'] as $rep)
+                    $models[]=$this->populateRecord($rep[0]);
+                return $models;
+            }
+            else
+                return null;
+    }
+
+    /**
      * Nodes are created differently to relationships, so we override the ActiveResource method here.
      * @param array $attributes The attributes to be used when creating the node
      * @return boolean true on success, false on failure
@@ -103,9 +207,8 @@ class ENeo4jNode extends ENeo4jPropertyContainer
             Yii::trace(get_class($this).'.create()','ext.Neo4jSuite.ENeo4jNode');
 
             //open a transaction for insert AND autoindexing
-            $transaction=Yii::app()->neo4jSuite->createBatchTransaction();
+            $transaction=$this->getGraphService()->createBatchTransaction();
 
-            //send by reference, because we want to assign a batch id!
             $transaction->addSaveOperation($this);
             
             $response=$transaction->execute();
@@ -205,16 +308,20 @@ class ENeo4jNode extends ENeo4jPropertyContainer
      * @param ENeo4jTraversalDescription $traversalDescription The traversal description object
      * @return array an array of ENeo4jPropertyContainers according to their modelclass field.
      */
-    public function traverse($traversalDescription)
+    public function traverse($traversalDescription=null)
     {
         Yii::trace(get_class($this).'.traverse()','ext.Neo4jSuite.ENeo4jNode');
-        if(is_array($traversalDescription))
-        {
-            $traverser=new ENeo4jTraversalDescription;
-            $traverser->setOptions($traversalDescription);
-        }
+        if($traversalDescription!=null)
+            if(is_array($traversalDescription))
+            {
+                $traverser=new ENeo4jTraversalDescription;
+                $traverser->setOptions($traversalDescription);
+            }
+            else
+                $traverser=$traversalDescription;
         else
-            $traverser=$traversalDescription;
+            $traverser=new ENeo4jTraversalDescription;
+
         switch($traverser->getReturnType())
         {
             case ENeo4jTraversalDescription::RETURN_NODES:
@@ -225,8 +332,6 @@ class ENeo4jNode extends ENeo4jPropertyContainer
                 throw new ENeo4jException('Returntype not implemented');
 
         }
-
-
     }
 
 }
