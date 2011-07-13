@@ -34,6 +34,10 @@ class ENeo4jGraphService extends EActiveResource
 	$this->afterConstruct();
     }
 
+    public static function  model($className = __CLASS__) {
+        return parent::model($className);
+    }
+
 
     public function rest()
     {

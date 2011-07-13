@@ -62,6 +62,7 @@ class ENeo4jBatchTransaction extends EActiveResource
                 
         switch($propertyContainer)
         {
+            ////SAVING NODE
             case ($propertyContainer instanceof ENeo4jNode):
 
                 $this->operations[]=array(
@@ -72,10 +73,11 @@ class ENeo4jBatchTransaction extends EActiveResource
                 );
             break;
 
+            ////SAVING RELATIONSHIP
             case ($propertyContainer instanceof ENeo4jRelationship):
 
                 //first, check if the start and end nodes have a batch id,
-                //otherwise this isn't an overall transaction (nodes were created before and can't be referenced with {id})!!
+                //otherwise this isn't an overall transaction (nodes were created before and can't be referenced with a batch {id})!!
                 $startBatch=$propertyContainer->startNode->batchId;
                 $endBatch=$propertyContainer->endNode->batchId;
 
@@ -106,6 +108,7 @@ class ENeo4jBatchTransaction extends EActiveResource
 
         }
 
+        //autoindexing enabled?
         if($propertyContainer->autoIndexing)
             $this->addAutoIndexOperation($propertyContainer);
 
@@ -139,8 +142,38 @@ class ENeo4jBatchTransaction extends EActiveResource
 
     public function addAutoIndexOperation(ENeo4jPropertyContainer $propertyContainer)
     {
-        foreach($propertyContainer->autoIndex() as $indexoperation)
-            $this->operations[]=$indexoperation;
+        switch ($propertyContainer)
+        {
+            //INDEXING FOR NODES
+            case ($propertyContainer instanceof ENeo4jNode):
+                if(!$propertyContainer->getIsNewResource())
+                    $this->operations[]=array('method'=>'DELETE','to'=>'/index/node/'.$propertyContainer->getModelIndexName().'/'.$propertyContainer->getId());
+
+                foreach($this->getAttributes() as $attribute=>$value)
+                {
+                    if(!is_array($value))
+                    {
+                        $this->operations[]=array('method'=>'POST','to'=>'/index/node/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($value),'body'=>'{'.$propertyContainer->batchId.'}');
+                    }
+                }
+                break;
+            //INDEXING FOR RELATIONSHIPS
+            case ($propertyContainer instanceof ENeo4jRelationship):
+                if(!$propertyContainer->getIsNewResource())
+                    $this->operations[]=array('method'=>'DELETE','to'=>'/index/relationship/'.$propertyContainer->getModelIndexName().'/'.$propertyContainer->getId());
+
+                foreach($propertyContainer->getAttributes() as $attribute=>$value)
+                {
+                    if(!is_array($value))
+                    {
+                        $this->operations[]=array('method'=>'POST','to'=>'/index/relationship/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($value),'body'=>'{'.$propertyContainer->batchId.'}');
+                    }
+                }
+
+                //also add the type of the relationship which isn't a property
+                $this->operations[]=array('method'=>'POST','to'=>'/index/relationship/'.$propertyContainer->getModelIndexName().'/type/'.urlencode($propertyContainer->type),'body'=>'{'.$propertyContainer->batchId.'}');
+                break;
+        }
     }
 
     public function execute()

@@ -61,33 +61,6 @@ class ENeo4jNode extends ENeo4jPropertyContainer
 
         return $index;
     }
-    /**
-     * This method indexes a node and all its attributes. The index used is specified in getModelIndexName() and defaults
-     * to modelclass_index. We need that to isntantiate objects according to the modelclass field. When indexing an attribute
-     * we have to take care to delete old values as this isn't done automatically. Additionally we add the id of the node as this isn't
-     * a property.
-     * If the index isn't found it will be created using a fulltext index wth Lucene as provider.
-     */
-    public function autoIndex()
-    {
-
-        $index=$this->getModelIndex();
-        
-        $batchCommands=array();
-
-        if(!$this->getIsNewResource())
-            $batchCommands[]=array('method'=>'DELETE','to'=>'/index/node/'.$index->name.'/'.$this->getId());
-
-        foreach($this->getAttributes() as $attribute=>$value)
-        {
-            if(!is_array($value))
-            {
-                $batchCommands[]=array('method'=>'POST','to'=>'/index/node/'.$index->name.'/'.urlencode($attribute).'/'.urlencode($value),'body'=>'{'.$this->batchId.'}');
-            }
-        }
-        
-        return $batchCommands;
-    }
 
     /**
      * Finds a single property container with the specified id within the modelclass index.

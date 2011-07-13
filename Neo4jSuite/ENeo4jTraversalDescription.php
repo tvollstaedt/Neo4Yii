@@ -69,7 +69,7 @@ class ENeo4jTraversalDescription
         /**
          * Adds a relationship type to your description
          * @param string $type The type of relationship you want to add
-         * @param string $direction The direction of the relationship ('all','out','in'). Defaults to all.
+         * @param string $direction The direction of the relationship ('all','out','in'). Defaults to null (=all).
          */
 	public function addRelationshipType($type, $direction=NULL)
 	{
@@ -94,6 +94,7 @@ class ENeo4jTraversalDescription
         public function setOrder($order)
         {
             $this->_order=$order;
+            $this->_traversalDescription['order'] = $this->_order;
         }
 
         /**
@@ -164,17 +165,6 @@ class ENeo4jTraversalDescription
 		$this->_returnFilter['body'] = $body;
 		$this->_traversalDescription['return_filter'] = $this->_returnFilter;
 	}
-
-        /**
-         * Add a node property filter to your description e.g.: addNodePropertyFilter('modelclass','Person')
-         * @param string $key The key field
-         * @param string $value The value to match
-         */
-        public function addNodePropertyFilter($key,$value)
-        {
-                $body="position.endNode().getProperty('".$key."',0)=='".$value."'";
-                $this->setReturnFilter('javascript', $body);
-        }
 
         /**
          * Set the maximum traversal depth to your description. This usually defaults to 1
