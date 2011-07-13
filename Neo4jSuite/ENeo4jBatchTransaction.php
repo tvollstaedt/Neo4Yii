@@ -149,7 +149,7 @@ class ENeo4jBatchTransaction extends EActiveResource
                 if(!$propertyContainer->getIsNewResource())
                     $this->operations[]=array('method'=>'DELETE','to'=>'/index/node/'.$propertyContainer->getModelIndexName().'/'.$propertyContainer->getId());
 
-                foreach($this->getAttributes() as $attribute=>$value)
+                foreach($propertyContainer->getAttributes() as $attribute=>$value)
                 {
                     if(!is_array($value))
                     {
@@ -185,8 +185,25 @@ class ENeo4jBatchTransaction extends EActiveResource
             {
                 //clean all batchIds of the objects we used during the transaction
                 foreach($this->instances as $instance)
+                {
                     $instance->assignBatchId(null);
-                return $this->postRequest(null,$this->operations);
+                }
+                
+                $response=$this->postRequest(null,$this->operations);
+
+                foreach($response as $resp)
+                {
+                    //we check if any id that is coming back is connected to a propertyContainer in our instances array.
+                    //If so we update the object and assign the idProperty (=self)
+                    if(isset($resp['id']) && isset($resp['body']['self']))
+                    {
+                        $instance=$this->instances[$resp['id']];
+                        $propertyField=$instance->idProperty();
+                        $instance->$propertyField=$resp['body']['self'];
+                    }
+                }
+
+                return $response;
             }
 
         }
