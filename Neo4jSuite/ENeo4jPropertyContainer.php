@@ -40,7 +40,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
 
     public function getModelIndexName()
     {
-        return ENeo4jNodeAutoIndex::$defaultIndex['name'];
+        return ENeo4jNodeAutoIndex::$configuration['name'];
     }
 
     /**

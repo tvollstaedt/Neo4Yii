@@ -90,7 +90,7 @@ class ENeo4jNodeAutoIndex extends ENeo4jIndex
      */
     public function query(ENeo4jLuceneQuery $query,$limit=null)
     {
-        Yii::trace(get_class($this).'.queryIndex()','ext.Neo4jSuite.ENeo4jNodeAutoIndex');
+        Yii::trace(get_class($this).'.query()','ext.Neo4jSuite.ENeo4jNodeAutoIndex');
         if($limit)
             $cypherquery='start x=('.self::$configuration['name'].',"'.$query->getRawQueryString().'") return x limit '.$limit;
         else

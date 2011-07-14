@@ -79,7 +79,11 @@ class ENeo4jNode extends ENeo4jPropertyContainer
                 $queryobject->addStatement($this->getModelClassField().':'.get_class($this),'AND');
             }
 
-            return ENeo4jNodeAutoIndex::model()->query($queryobject,$limit=1);
+            $models=ENeo4jNodeAutoIndex::model()->query($queryobject,$limit=1);
+            if(isset($models[0]))
+                return $models[0];
+            else
+                return null;
     }
 
 
