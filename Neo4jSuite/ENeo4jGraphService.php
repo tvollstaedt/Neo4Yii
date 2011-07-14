@@ -48,6 +48,11 @@ class ENeo4jGraphService extends EActiveResource
         );
     }
 
+    public function delete()
+    {
+        $this->deleteRequest();
+    }
+
     public function getConnection()
     {
         return $this->_connection;
@@ -76,6 +81,11 @@ class ENeo4jGraphService extends EActiveResource
     public function queryByCypher($cypher)
     {
         return $this->postRequest('ext/CypherPlugin/graphdb/execute_query',array('query'=>$cypher));
+    }
+
+    public function queryByGremlin($gremlin)
+    {
+        return $this->postRequest('ext/GremlinPlugin/graphdb/execute_script',array('script'=>$gremlin));
     }
     
 }

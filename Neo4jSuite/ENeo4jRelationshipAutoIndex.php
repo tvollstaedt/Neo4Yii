@@ -9,12 +9,35 @@
  * ENeo4jNodeIndex represents a relationship index and inherits from ENeo4jIndex.
  * Querying the index will alway return nodes.
  */
-class ENeo4jRelationshipIndex extends ENeo4jIndex
+class ENeo4jRelationshipAutoIndex extends ENeo4jIndex
 {
+
+    public static $defaultIndex=array(
+        'name'=>'Yii_relationship_autoindex',
+        'config'=>array(
+            'type'=>'fulltext',
+            'provider'=>'lucene',
+        ));
+
+    public $name;
+    public $type;
+    public $config;
 
     public static function model($className=__CLASS__)
     {
         return parent::model($className);
+    }
+
+    public function init()
+    {
+        $this->config=self::$defaultIndex;
+        $this->name=self::$defaultIndex['name'];
+        $this->type=self::$defaultIndex['config']['type'];
+    }
+
+    public function afterConstruct()
+    {
+        $this->create();
     }
 
     public function rest()
@@ -24,7 +47,7 @@ class ENeo4jRelationshipIndex extends ENeo4jIndex
             array('resource'=>'index/relationship')
         );
     }
-
+    
     /**
      * Create a relationship index
      * @param array $attributes An array of attributes to be used for creation
@@ -38,7 +61,10 @@ class ENeo4jRelationshipIndex extends ENeo4jIndex
         {
             Yii::trace(get_class($this).'.create()','ext.Neo4jSuite.ENeo4jRelationshipIndex');
 
-            $this->populateRecord($this->postRequest(null,array('name'=>$this->name,'config'=>$this->config)));
+            if($attributes)
+                $this->postRequest(null,$attributes);
+            else
+                $this->postRequest(null,$this->config);
 
             $this->afterSave();
             $this->setIsNewResource(false);

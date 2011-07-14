@@ -38,12 +38,10 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
         $this->batchId=$id;
     }
 
-    /**
-     * Used to name the modelindex for autoindexing
-     */
-    abstract public function getModelIndex();
-
-    abstract public function createModelIndex();
+    public function getModelIndexName()
+    {
+        return ENeo4jNodeAutoIndex::$defaultIndex['name'];
+    }
 
     /**
      * Inits the model and sets the modelclassfield so that the model can be instantiated properly.

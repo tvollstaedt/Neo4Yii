@@ -13,8 +13,6 @@
 class ENeo4jNode extends ENeo4jPropertyContainer
 {
 
-    private static $_modelIndex;
-
     public static function model($className=__CLASS__)
     {
         return parent::model($className);
@@ -32,36 +30,6 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         );
     }
 
-    public function getModelIndex()
-    {
-        if(isset(self::$_modelIndex))
-            return self::$_modelIndex;
-        else
-            return self::$_modelIndex=$this->createModelIndex();
-    }
-
-    /**
-     * Defines the name of the index used for autoIndexing. Oerwrite if you wanna use a customized index
-     * @return string The name of the index for autoIndexing
-     */
-    public function getModelIndexName()
-    {
-        return 'Yii_node_autoindex';
-    }
-
-    public function createModelIndex()
-    {
-        $index=new ENeo4jNodeIndex;
-        $index->name=$this->getModelIndexName();
-        $index->config=array(
-            'provider'=>'lucene',
-            'type'=>'fulltext',
-        );
-        $index->save();
-
-        return $index;
-    }
-
     /**
      * Finds a single property container with the specified id within the modelclass index.
      * @param mixed $id The id.
@@ -70,10 +38,13 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     public function findById($id)
     {
             Yii::trace(get_class($this).'.findById()','ext.Neo4jSuite.ENeo4jNode');
-            $query="start x=(".$id.") where x.".$this->getModelClassField()."='".get_class($this)."' return x";
-            $response=$this->getGraphService()->queryByCypher($query);
-            if(isset($response['data'][0][0]))
-                return $this->populateRecord($response['data'][0][0]);
+            $gremlinquery='g.v('.$id.').filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}';
+            $response=$this->getGraphService()->queryByGremlin($gremlinquery);
+            if($response[0])
+            {
+                $model=$this->populateRecords($response);
+                return $model[0];
+            }
             else
                 return null;
     }
@@ -108,13 +79,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
                 $queryobject->addStatement($this->getModelClassField().':'.get_class($this),'AND');
             }
 
-            $cypherquery='start x=('.$this->getModelIndexName().',"'.$queryobject->getRawQueryString().'") return x limit 1';
-            $response=$this->getGraphService()->queryByCypher($cypherquery);
-
-            if(isset($response['data'][0][0]))
-                return $this->populateRecord($response['data'][0][0]);
-            else
-                return null;
+            return ENeo4jNodeAutoIndex::model()->query($queryobject,$limit=1);
     }
 
 
@@ -148,22 +113,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
                 $queryobject->addStatement($this->getModelClassField().':'.get_class($this),'AND');
             }
 
-            if($limit)
-                $cypherquery='start x=('.$this->getModelIndexName().',"'.$queryobject->getRawQueryString().'") return x limit '.$limit;
-            else
-                $cypherquery='start x=('.$this->getModelIndexName().',"'.$queryobject->getRawQueryString().'") return x';
-            $response=$this->getGraphService()->queryByCypher($cypherquery);
-
-            $models=array();
-
-            if(isset($response['data'][0][0]))
-            {
-                foreach($response['data'] as $rep)
-                    $models[]=$this->populateRecord($rep[0]);
-                return $models;
-            }
-            else
-                return null;
+            return ENeo4jNodeAutoIndex::model()->query($queryobject,$limit);
     }
 
     /**

@@ -59,7 +59,7 @@ abstract class ENeo4jIndex extends EActiveResource
      * Overrides the EActiveResource updatebyId()
      * Indices cannot be updated, so throw an ENeo4jException if one dares to do that
      */
-    public function updateById($id,$attributes=null)
+    public function updateById($indexname,$attributes=null)
     {
 
             throw new ENeo4jException('Unable to update index', 403);
@@ -67,27 +67,19 @@ abstract class ENeo4jIndex extends EActiveResource
 
 
     /**
-     * Finds a an index with the specified id/name.
-     * @param mixed $indexname The name of the index
-     * @return ENeo4jIndex the index found. Null if none is found.
+     * Overrides the EActiveResource findbyId()
+     * Indices cannot be "found", so throw an ENeo4jException if one dares to do that
      */
     public function findById($indexname)
     {
-            Yii::trace(get_class($this).'.findById()','ext.Neo4jSuite.ENeo4jIndex');
-            $allindices=$this->getRequest();
-            if(!$allindices)
-                throw new EActiveResourceRequestNotFoundException ("Index $indexname not found");
-            if(array_key_exists($indexname,$allindices))
-                return $this->populateRecord(CMap::mergeArray(array('name'=>$indexname),$allindices[$indexname]));
-            else
-                throw new EActiveResourceRequestNotFoundException ("Index $indexname not found");
+            throw new ENeo4jException('Unable to use findById() on index', 403);
     }
 
     /**
      * Deletes the index with the specified name.
      * @param mixed $id The name of the index
      */
-    public function deleteById($id)
+    public function deleteById($indexname)
     {
             Yii::trace(get_class($this).'.deleteById()','ext.Neo4jSuite.ENeo4jIndex');
             $this->deleteRequest($id);
