@@ -12,27 +12,16 @@
 class ENeo4jRelationshipAutoIndex extends ENeo4jIndex
 {
 
-    public static $defaultIndex=array(
+    public static $configuration=array(
         'name'=>'Yii_relationship_autoindex',
         'config'=>array(
             'type'=>'fulltext',
             'provider'=>'lucene',
         ));
 
-    public $name;
-    public $type;
-    public $config;
-
     public static function model($className=__CLASS__)
     {
         return parent::model($className);
-    }
-
-    public function init()
-    {
-        $this->config=self::$defaultIndex;
-        $this->name=self::$defaultIndex['name'];
-        $this->type=self::$defaultIndex['config']['type'];
     }
 
     public function afterConstruct()
@@ -64,7 +53,7 @@ class ENeo4jRelationshipAutoIndex extends ENeo4jIndex
             if($attributes)
                 $this->postRequest(null,$attributes);
             else
-                $this->postRequest(null,$this->config);
+                $this->postRequest(null,self::$configuration);
 
             $this->afterSave();
             $this->setIsNewResource(false);

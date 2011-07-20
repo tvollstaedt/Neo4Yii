@@ -11,14 +11,12 @@
 class ENeo4jRelationship extends ENeo4jPropertyContainer
 {
 
-    public $autoIndexing=false;
+    public $autoIndexing=true;
     public $start; //start uri
     public $end; //end uri
     public $type;
     private $_startNode; //a container for the startNode object. Lazily loaded via __get()
     private $_endNode; //a container for the endNode object. Lazily loaded via __get()
-
-    private static $_modelIndex;
 
     public static function model($className=__CLASS__)
     {
@@ -35,6 +33,11 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             parent::rest(),
             array('resource'=>'relationship')
         );
+    }
+
+    public function getModelIndexName()
+    {
+        return ENeo4jRelationshipAutoIndex::$configuration['name'];
     }
 
     /**
@@ -59,14 +62,6 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             $this->_endNode=$value;
         else
             parent::__set($name,$value);
-    }
-
-    public function getModelIndex()
-    {
-        if(isset(self::$_modelIndex))
-            return self::$_modelIndex;
-        else
-            return self::$_modelIndex=new ENeo4jRelationshipAutoIndex;
     }
     
     /**

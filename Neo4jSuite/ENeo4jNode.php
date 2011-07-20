@@ -30,6 +30,11 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         );
     }
 
+    public function getModelIndexName()
+    {
+        return ENeo4jNodeAutoIndex::$configuration['name'];
+    }
+
     /**
      * Finds a single property container with the specified id within the modelclass index.
      * @param mixed $id The id.
