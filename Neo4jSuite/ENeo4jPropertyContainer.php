@@ -212,7 +212,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
                     $model->$key=$value;
                 //we need a transaction to update the model AND the index
                 $transaction=$this->getGraphService()->createBatchTransaction();
-                $transaction->addUpdateOperation($model);
+                $transaction->addSaveOperation($model);
                 $transaction->execute();
             }
             else

@@ -108,4 +108,3 @@ abstract class ENeo4jIndex extends EActiveResource
 }
 
 ?>
-

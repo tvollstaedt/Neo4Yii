@@ -51,14 +51,13 @@ class ENeo4jBatchTransaction extends EActiveResource
     public function addSaveOperation(ENeo4jPropertyContainer $propertyContainer,$validate=true)
     {
         if($validate && !$propertyContainer->validate())
-            throw new ENeo4jTransactionException('Transaction failure. One or more models did not validate!',500);
+            throw new ENeo4jTransactionException('Transaction failure. One or more models did not validate!');
+
+        if(!$propertyContainer->getIsNewResource())
+            return $this->addUpdateOperation($propertyContainer);
 
         $propertyContainer->assignBatchId(count($this->operations));
         $this->addToInstances($propertyContainer);
-
-        //update if not new!
-        if(!$propertyContainer->getIsNewResource())
-            $this->addUpdateOperation($propertyContainer);
                 
         switch($propertyContainer)
         {
@@ -142,38 +141,35 @@ class ENeo4jBatchTransaction extends EActiveResource
 
     public function addAutoIndexOperation(ENeo4jPropertyContainer $propertyContainer)
     {
-        switch ($propertyContainer)
-        {
-            //INDEXING FOR NODES
-            case ($propertyContainer instanceof ENeo4jNode):
-                if(!$propertyContainer->getIsNewResource())
-                    $this->operations[]=array('method'=>'DELETE','to'=>'/index/node/'.$propertyContainer->getModelIndexName().'/'.$propertyContainer->getId());
+
+            if($propertyContainer->getIsNewResource())
+            {
+                foreach($propertyContainer->getAttributes() as $attribute=>$value)
+                {
+                    if(!is_array($value))
+                    {
+                        $this->operations[]=array('method'=>'POST','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($value),'body'=>'{'.$propertyContainer->batchId.'}');
+                    }
+                    if(is_array($value))
+                        foreach($value as $arrayvalue)
+                            $this->operations[]=array('method'=>'POST','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($arrayvalue),'body'=>'{'.$propertyContainer->batchId.'}');
+                }
+            }
+            else
+            {
+                $this->operations[]=array('method'=>'DELETE','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.$propertyContainer->getId());
 
                 foreach($propertyContainer->getAttributes() as $attribute=>$value)
                 {
                     if(!is_array($value))
                     {
-                        $this->operations[]=array('method'=>'POST','to'=>'/index/node/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($value),'body'=>'{'.$propertyContainer->batchId.'}');
+                        $this->operations[]=array('method'=>'POST','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($value),'body'=>$propertyContainer->self);
                     }
+                    if(is_array($value))
+                        foreach($value as $arrayvalue)
+                            $this->operations[]=array('method'=>'POST','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($arrayvalue),'body'=>$propertyContainer->self);
                 }
-                break;
-            //INDEXING FOR RELATIONSHIPS
-            case ($propertyContainer instanceof ENeo4jRelationship):
-                if(!$propertyContainer->getIsNewResource())
-                    $this->operations[]=array('method'=>'DELETE','to'=>'/index/relationship/'.$propertyContainer->getModelIndexName().'/'.$propertyContainer->getId());
-
-                foreach($propertyContainer->getAttributes() as $attribute=>$value)
-                {
-                    if(!is_array($value))
-                    {
-                        $this->operations[]=array('method'=>'POST','to'=>'/index/relationship/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($value),'body'=>'{'.$propertyContainer->batchId.'}');
-                    }
-                }
-
-                //also add the type of the relationship which isn't a property
-                $this->operations[]=array('method'=>'POST','to'=>'/index/relationship/'.$propertyContainer->getModelIndexName().'/type/'.urlencode($propertyContainer->type),'body'=>'{'.$propertyContainer->batchId.'}');
-                break;
-        }
+            }
     }
 
     public function execute()

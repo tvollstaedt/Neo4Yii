@@ -122,4 +122,3 @@ class ENeo4jNodeAutoIndex extends ENeo4jIndex
 }
 
 ?>
-
