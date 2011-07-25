@@ -51,7 +51,7 @@ class ENeo4jBatchTransaction extends EActiveResource
     public function addSaveOperation(ENeo4jPropertyContainer $propertyContainer,$validate=true)
     {
         if($validate && !$propertyContainer->validate())
-            throw new ENeo4jTransactionException('Transaction failure. One or more models did not validate!');
+            throw new ENeo4jTransactionException('Transaction failure. One or more models of class '.get_class($propertyContainer).' did not validate!');
 
         if(!$propertyContainer->getIsNewResource())
             return $this->addUpdateOperation($propertyContainer);
@@ -77,21 +77,47 @@ class ENeo4jBatchTransaction extends EActiveResource
 
                 //first, check if the start and end nodes have a batch id,
                 //otherwise this isn't an overall transaction (nodes were created before and can't be referenced with a batch {id})!!
-                $startBatch=$propertyContainer->startNode->batchId;
-                $endBatch=$propertyContainer->endNode->batchId;
+                $startNodeBatchId=$propertyContainer->startNode->batchId;
+                $endNodeBatchId=$propertyContainer->endNode->batchId;
 
-                if(isset($startBatch) && isset($endBatch))
+                if(isset($startNodeBatchId) && isset($endNodeBatchId))
+                {
                     $this->operations[]=array(
                         'method'=>'POST',
-                        'to'=>'{'.$propertyContainer->getStartNode()->batchId.'}/relationships',
+                        'to'=>'{'.$startNodeBatchId.'}/relationships',
                         'body'=>array(
-                            'to'=>'{'.$propertyContainer->getEndNode()->batchId.'}',
+                            'to'=>'{'.$endNodeBatchId.'}',
                             'type'=>$propertyContainer->type,
                             'data'=>$propertyContainer->getAttributes(),
                         ),
                         'id'=>$propertyContainer->batchId,);
-
+                }
+                else if(isset($startNodeBatchId) && !isset($endNodeBatchId))
+                {
+                    $this->operations[]=array(
+                        'method'=>'POST',
+                        'to'=>'{'.$startNodeBatchId.'}/relationships',
+                        'body'=>array(
+                            'to'=>$propertyContainer->endNode->self,
+                            'type'=>$propertyContainer->type,
+                            'data'=>$propertyContainer->getAttributes(),
+                        ),
+                        'id'=>$propertyContainer->batchId,);
+                }
+                else if(!isset($startNodeBatchId) && isset($endNodeBatchId))
+                {
+                    $this->operations[]=array(
+                        'method'=>'POST',
+                        'to'=>$propertyContainer->startNode->self.'/relationships',
+                        'body'=>array(
+                            'to'=>'{'.$endNodeBatchId.'}',
+                            'type'=>$propertyContainer->type,
+                            'data'=>$propertyContainer->getAttributes(),
+                        ),
+                        'id'=>$propertyContainer->batchId,);
+                }
                 else
+                {
                     $this->operations[]=array(
                         'method'=>'POST',
                         'to'=>'/node/'.$propertyContainer->getStartNode()->getId().'/relationships',
@@ -102,6 +128,7 @@ class ENeo4jBatchTransaction extends EActiveResource
                         ),
                         'id'=>$propertyContainer->batchId,
                         );
+                }
                 
             break;
 
