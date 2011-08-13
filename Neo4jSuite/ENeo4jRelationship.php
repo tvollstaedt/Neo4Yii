@@ -117,7 +117,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             Yii::trace(get_class($this).'.findById()','ext.Neo4jSuite.ENeo4jRelationship');
             $gremlinquery='g.e('.$id.').filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}';
             $response=$this->getGraphService()->queryByGremlin($gremlinquery);
-            if($response[0])
+            if(isset($response[0]))
             {
                 $model=$this->populateRecords($response);
                 return $model[0];

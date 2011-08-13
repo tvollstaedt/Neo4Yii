@@ -173,13 +173,17 @@ class ENeo4jBatchTransaction extends EActiveResource
             {
                 foreach($propertyContainer->getAttributes() as $attribute=>$value)
                 {
-                    if(!is_array($value))
+                    if(!is_array($value) && !empty($value))
                     {
                         $this->operations[]=array('method'=>'POST','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($value),'body'=>'{'.$propertyContainer->batchId.'}');
                     }
                     if(is_array($value))
                         foreach($value as $arrayvalue)
-                            $this->operations[]=array('method'=>'POST','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($arrayvalue),'body'=>'{'.$propertyContainer->batchId.'}');
+                        {
+                            if(!empty($arrayvalue))
+                                $this->operations[]=array('method'=>'POST','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($arrayvalue),'body'=>'{'.$propertyContainer->batchId.'}');
+                        }
+
                 }
             }
             else
@@ -188,13 +192,17 @@ class ENeo4jBatchTransaction extends EActiveResource
 
                 foreach($propertyContainer->getAttributes() as $attribute=>$value)
                 {
-                    if(!is_array($value))
+                    if(!is_array($value) && !empty($value))
                     {
                         $this->operations[]=array('method'=>'POST','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($value),'body'=>$propertyContainer->self);
                     }
                     if(is_array($value))
                         foreach($value as $arrayvalue)
-                            $this->operations[]=array('method'=>'POST','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($arrayvalue),'body'=>$propertyContainer->self);
+                        {
+                            if(!empty($arrayvalue))
+                                $this->operations[]=array('method'=>'POST','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($arrayvalue),'body'=>$propertyContainer->self);
+                        }
+
                 }
             }
     }
