@@ -12,7 +12,6 @@
 abstract class ENeo4jPropertyContainer extends EActiveResource
 {    
     public $self; //always contains the full uri. If you need the id use getId() instead.
-    public $autoIndexing=true; //true by default, meaning all attributes (especially the modelclass attribute) will automatically indexed
     
     public $batchId; //this is used when using the ENeo4jBatchTransaction. Each property container gets an id to be uniquely identified
 
@@ -37,8 +36,6 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
     {
         $this->batchId=$id;
     }
-
-    abstract public function getModelIndexName();
 
     /**
      * Inits the model and sets the modelclassfield so that the model can be instantiated properly.

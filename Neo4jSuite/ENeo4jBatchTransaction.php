@@ -133,11 +133,6 @@ class ENeo4jBatchTransaction extends EActiveResource
             break;
 
         }
-
-        //autoindexing enabled?
-        if($propertyContainer->autoIndexing)
-            $this->addAutoIndexOperation($propertyContainer);
-
     }
 
     /**
@@ -161,50 +156,6 @@ class ENeo4jBatchTransaction extends EActiveResource
             'id'=>$propertyContainer->batchId
         );
 
-        if($propertyContainer->autoIndexing)
-            $this->addAutoIndexOperation($propertyContainer);
-
-    }
-
-    public function addAutoIndexOperation(ENeo4jPropertyContainer $propertyContainer)
-    {
-
-            if($propertyContainer->getIsNewResource())
-            {
-                foreach($propertyContainer->getAttributes() as $attribute=>$value)
-                {
-                    if(!is_array($value) && !empty($value))
-                    {
-                        $this->operations[]=array('method'=>'POST','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($value),'body'=>'{'.$propertyContainer->batchId.'}');
-                    }
-                    if(is_array($value))
-                        foreach($value as $arrayvalue)
-                        {
-                            if(!empty($arrayvalue))
-                                $this->operations[]=array('method'=>'POST','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($arrayvalue),'body'=>'{'.$propertyContainer->batchId.'}');
-                        }
-
-                }
-            }
-            else
-            {
-                $this->operations[]=array('method'=>'DELETE','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.$propertyContainer->getId());
-
-                foreach($propertyContainer->getAttributes() as $attribute=>$value)
-                {
-                    if(!is_array($value) && !empty($value))
-                    {
-                        $this->operations[]=array('method'=>'POST','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($value),'body'=>$propertyContainer->self);
-                    }
-                    if(is_array($value))
-                        foreach($value as $arrayvalue)
-                        {
-                            if(!empty($arrayvalue))
-                                $this->operations[]=array('method'=>'POST','to'=>'/index/'.$propertyContainer->getResource().'/'.$propertyContainer->getModelIndexName().'/'.urlencode($attribute).'/'.urlencode($arrayvalue),'body'=>$propertyContainer->self);
-                        }
-
-                }
-            }
     }
 
     public function execute()
@@ -243,6 +194,7 @@ class ENeo4jBatchTransaction extends EActiveResource
             throw new ENeo4jTransactionException('Transaction failure '.$e->getMessage(),500);
         }
     }
+   
 
 }
 

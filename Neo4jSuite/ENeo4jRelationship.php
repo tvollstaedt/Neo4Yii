@@ -10,8 +10,6 @@
  */
 class ENeo4jRelationship extends ENeo4jPropertyContainer
 {
-
-    public $autoIndexing=true;
     public $start; //start uri
     public $end; //end uri
     public $type;
@@ -33,11 +31,6 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             parent::rest(),
             array('resource'=>'relationship')
         );
-    }
-
-    public function getModelIndexName()
-    {
-        return ENeo4jRelationshipAutoIndex::$configuration['name'];
     }
 
     /**
