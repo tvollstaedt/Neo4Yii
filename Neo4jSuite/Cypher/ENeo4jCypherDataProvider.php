@@ -54,7 +54,8 @@ class ENeo4jCypherDataProvider extends CDataProvider
                         $pagination->applyLimit($this->query);
                 }
 
-                $data=ENeo4jGraphService::model()->queryByCypher($this->query);
+                $response=ENeo4jGraphService::model()->queryByCypher($this->query);
+                $data=$response->getData();
                 $results=array();
                 if(isset($data['data']))
                     if(is_array($data['data']))
@@ -86,7 +87,7 @@ class ENeo4jCypherDataProvider extends CDataProvider
         protected function calculateTotalItemCount()
         {
                 $graph=new ENeo4jGraphService;
-                $count=$graph->queryByCypher($this->query.'return count(n)');
+                $count=$graph->queryByCypher($this->query.'return count(n)')->getData();
                 if(isset($count['data'][0][0]))
                     return $count['data'][0][0];
                 else

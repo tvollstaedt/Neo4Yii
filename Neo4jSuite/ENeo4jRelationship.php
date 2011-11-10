@@ -82,8 +82,9 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             $transaction->addSaveOperation($this);
 
             $response=$transaction->execute();
+            $responseData=$response->getData();
 
-            $returnedmodel=$this->populateRecord($response[0]['body']);
+            $returnedmodel=$this->populateRecord($responseData[0]['body']);
 
             if($returnedmodel)
             {
@@ -110,9 +111,10 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             Yii::trace(get_class($this).'.findById()','ext.Neo4jSuite.ENeo4jRelationship');
             $gremlinquery='g.e('.$id.').filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}';
             $response=$this->getGraphService()->queryByGremlin($gremlinquery);
-            if(isset($response[0]))
+            $responseData=$response->getData();
+            if(isset($responseData[0]))
             {
-                $model=$this->populateRecords($response);
+                $model=$this->populateRecords($responseData);
                 return $model[0];
             }
             else
@@ -148,7 +150,8 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         else
         {
             Yii::trace(get_class($this).' is lazyLoading startNode','ext.Neo4jSuite.ENeo4jRelationship');
-            return $this->_startNode=ENeo4jNode::model()->populateRecord(ENeo4jNode::model()->getRequest(end(explode('/',$this->start))));
+            $response=ENeo4jNode::model()->getRequest(end(explode('/',$this->start)));
+            return $this->_startNode=ENeo4jNode::model()->populateRecord($response->getData());
         }
     }
 
@@ -163,7 +166,8 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         else
         {
             Yii::trace(get_class($this).' is lazyLoading endNode','ext.Neo4jSuite.ENeo4jRelationship');
-            return $this->_endNode=ENeo4jNode::model()->populateRecord(ENeo4jNode::model()->getRequest(end(explode('/',$this->end))));
+            $response=ENeo4jNode::model()->getRequest(end(explode('/',$this->end)));
+            return $this->_endNode=ENeo4jNode::model()->populateRecord($response->getData());
         }
     }
 

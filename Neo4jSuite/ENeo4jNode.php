@@ -39,7 +39,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     {
             Yii::trace(get_class($this).'.findById()','ext.Neo4jSuite.ENeo4jNode');
             $gremlinquery='g.v('.$id.').filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}';
-            $response=$this->getGraphService()->queryByGremlin($gremlinquery);
+            $response=$this->getGraphService()->queryByGremlin($gremlinquery)->getData();
             if(isset($response[0]) && is_array($response[0]))
             {
                 $model=$this->populateRecords($response);
@@ -68,8 +68,9 @@ class ENeo4jNode extends ENeo4jPropertyContainer
             $transaction->addSaveOperation($this);
             
             $response=$transaction->execute();
+            $responseData=$response->getData();
 
-            $returnedmodel=$this->populateRecord($response[0]['body']);
+            $returnedmodel=$this->populateRecord($responseData[0]['body']);
 
             if($returnedmodel)
             {
@@ -136,7 +137,10 @@ class ENeo4jNode extends ENeo4jPropertyContainer
             else
                 $uri.='/'.$types;
         }
-        return ENeo4jRelationship::model()->populateRecords(ENeo4jRelationship::model()->customGetRequest($uri));
+        
+        $response=ENeo4jRelationship::model()->customGetRequest($uri);
+        
+        return ENeo4jRelationship::model()->populateRecords($response->getData());
     }
 
     /**
@@ -181,11 +185,13 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         switch($traverser->getReturnType())
         {
             case ENeo4jTraversalDescription::RETURN_NODES:
-                return ENeo4jNode::model()->populateRecords($this->postRequest($this->getId(),$traverser->toArray(),'/traverse/node'));
+                $response=$this->postRequest($this->getId(),$traverser->toArray(),'/traverse/node');
+                return ENeo4jNode::model()->populateRecords($response->getData());
             case ENeo4jTraversalDescription::RETURN_RELATIONSHIPS:
-                return ENeo4jRelationship::model()->populateRecords($this->postRequest($this->getId(),$traverser->toArray(),'/traverse/relationship'));
+                $response=$this->postRequest($this->getId(),$traverser->toArray(),'/traverse/relationship');
+                return ENeo4jRelationship::model()->populateRecords($response->getData());
             default:
-                throw new ENeo4jException('Returntype not implemented');
+                throw new ENeo4jException('Returntype not implemented!');
 
         }
     }
