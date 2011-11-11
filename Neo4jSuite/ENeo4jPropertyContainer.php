@@ -204,10 +204,8 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
             {
                 foreach($attributes as $key=>$value)
                     $model->$key=$value;
-                //we need a transaction to update the model AND the index
-                $transaction=$this->getGraphService()->createBatchTransaction();
-                $transaction->addSaveOperation($model);
-                $transaction->execute();
+
+                $model->save();
             }
             else
                 throw EActiveResourceException(Yii::t('ext.Neo4jSuite.ENeo4jPropertyContainer','The property container could not be found'));

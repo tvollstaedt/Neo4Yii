@@ -10,7 +10,7 @@
  * All parameters used in rest() are used by the classes extending ENeo4jPropertyContainer and ENeo4jIndex so don't
  * mess around with it unless you know what you are doing
  */
-class ENeo4jGraphService extends EActiveResource
+class ENeo4jGraphService
 {
     
     private $_connection;
@@ -18,27 +18,11 @@ class ENeo4jGraphService extends EActiveResource
     /**
      * Constructor.
      */
-    public function __construct($scenario='insert')
+    public function __construct()
     {
         $this->_connection=Yii::app()->neo4j;
-
-        if($scenario===null) // internally used by populateRecord() and model()
-		return;
-
-	$this->setScenario($scenario);
-        $this->setIsNewResource(true);
-
-	$this->init();
-
-	$this->attachBehaviors($this->behaviors());
-	$this->afterConstruct();
     }
-
-    public static function  model($className = __CLASS__) {
-        return parent::model($className);
-    }
-
-
+    
     public function rest()
     {
         return array(
@@ -46,11 +30,6 @@ class ENeo4jGraphService extends EActiveResource
             'contenttype'=>'application/json',
             'accepttype'=>'application/json',
         );
-    }
-
-    public function delete()
-    {
-        $this->deleteRequest();
     }
 
     public function getConnection()
@@ -80,12 +59,39 @@ class ENeo4jGraphService extends EActiveResource
 
     public function queryByCypher($cypher)
     {
-        return $this->postRequest('ext/CypherPlugin/graphdb/execute_query',array('query'=>$cypher));
+        Yii::trace(get_class($this).'.queryByCypher()','ext.Neo4jSuite.ENeo4jGraphService');
+        try{
+            $request=new EActiveResourceRequest();
+            $request->setUri($this->getHost().':'.$this->getPort().'/'.$this->getDb().'/'.'ext/CypherPlugin/graphdb/execute_query');
+            $request->setMethod('POST');
+            $request->setAcceptType('application/json');
+            $request->setContentType('application/json');
+            $request->setData(array('query'=>$cypher));
+            return $request->run();
+        }
+        catch(EActiveResourceException $e)
+        {
+            throw new ENeo4jScriptException('Error executing script',500);
+        }
     }
 
-    public function queryByGremlin($gremlin)
+    public function queryByGremlin(EGremlinScript $gremlin)
     {
-        return $this->postRequest('ext/GremlinPlugin/graphdb/execute_script',array('script'=>$gremlin));
+        Yii::trace(get_class($this).'.queryByGremlin()','ext.Neo4jSuite.ENeo4jGraphService');
+        try{
+            $request=new EActiveResourceRequest();
+            $request->setUri($this->getHost().':'.$this->getPort().'/'.$this->getDb().'/'.'ext/GremlinPlugin/graphdb/execute_script');
+            $request->setMethod('POST');
+            $request->setAcceptType('application/json');
+            $request->setContentType('application/json');
+            $request->setData(array('script'=>$gremlin->toString()));
+            
+            return $request->run();
+        }
+        catch(EActiveResourceException $e)
+        {
+            throw new ENeo4jScriptException('Error executing script',500);
+        }
     }
     
 }

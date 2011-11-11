@@ -59,7 +59,6 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     
     /**
      * Relationships are created differently to nodes, so we override the ActiveResource method here.
-     * CAUTION: This is a transactional method, meaning that creating and indexing are done via a ENeo4jBatchTransaction
      * @param array $attributes The attributes to be used when creating the relationship
      * @return boolean true on success, false on failure
      */
@@ -75,16 +74,19 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         if($this->beforeSave())
         {
             Yii::trace(get_class($this).'.create()','ext.Neo4jSuite.ENeo4jRelationship');
-
-            $transaction=$this->getGraphService()->createBatchTransaction();
-
-            //send by reference, because we want to assign a batchId!
-            $transaction->addSaveOperation($this);
-
-            $response=$transaction->execute();
+            
+            $response=$this->customPostRequest(
+                    $this->getSite().'/node/'.$this->getStartNode()->getId().'/relationships',
+                    array(
+                        'to'=>$this->getEndNode()->getId(),
+                        'type'=>$this->type,
+                        'data'=>$this->getAttributes()
+                    )
+            );
+            
             $responseData=$response->getData();
 
-            $returnedmodel=$this->populateRecord($responseData[0]['body']);
+            $returnedmodel=$this->populateRecord($response->getData());
 
             if($returnedmodel)
             {
@@ -109,8 +111,9 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     public function findById($id)
     {
             Yii::trace(get_class($this).'.findById()','ext.Neo4jSuite.ENeo4jRelationship');
-            $gremlinquery='g.e('.$id.').filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}';
-            $response=$this->getGraphService()->queryByGremlin($gremlinquery);
+            $gremlinQuery=new EGremlinScript;
+            $gremlinQuery->setQuery('g.e('.$id.').filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+            $response=$this->getGraphService()->queryByGremlin($gremlinQuery);
             $responseData=$response->getData();
             if(isset($responseData[0]))
             {
