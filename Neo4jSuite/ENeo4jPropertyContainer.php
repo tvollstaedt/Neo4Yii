@@ -14,8 +14,8 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
     public $self; //always contains the full uri. If you need the id use getId() instead.
     
     public $batchId; //this is used when using the ENeo4jBatchTransaction. Each property container gets an id to be uniquely identified
-
-    private $_graphService; //The graphService all nodes or relationships belong to.
+    
+    private static $_connection;
     
     /**
      * Overrides the ActiveResource method.
@@ -24,12 +24,26 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
     public function rest()
     {
         return CMap::mergeArray(
-                $this->getGraphService()->rest(),
+                $this->getConnection()->rest(),
                 array(
                     'idProperty'=>'self',
                     'container'=>'data',
                 )
         );
+    }
+    
+    public function getConnection()
+    {
+        if(isset(self::$_connection))
+                return self::$_connection;
+        else
+        {
+            self::$_connection=Yii::app()->getComponent('neo4j');
+            if(self::$_connection instanceof ENeo4jGraphService)
+                return self::$_connection;
+            else
+                throw new EActiveResourceException('No "neo4j" component specified!');
+        }
     }
 
     public function assignBatchId($id)
@@ -45,19 +59,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
         $modelclassfield=$this->getModelClassField();
         $this->$modelclassfield=get_class($this);
     }
-
-    /**
-     * Getter for the graphService object which itself is a subclass of ActiveResource
-     * @return ENeo4jGraphService The graphService object
-     */
-    public function getGraphService()
-    {
-        if(isset($this->_graphService))
-                return $this->_graphService;
-        else
-            return $this->_graphService=new ENeo4jGraphService;
-    }
-
+    
     /**
      * This method returns the name of the attribute that is used to determine to which modelclass a node or relationship
      * belongs to. Override this method to use your own attribute definition, but take care not to switch once you already created nodes or relationships
@@ -202,10 +204,8 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
             $model=$this->findById($id);
             if($model)
             {
-                foreach($attributes as $key=>$value)
-                    $model->$key=$value;
-
-                $model->save();
+                $model->putRequest($id,$attributes,'/properties');
+                
             }
             else
                 throw EActiveResourceException(Yii::t('ext.Neo4jSuite.ENeo4jPropertyContainer','The property container could not be found'));
@@ -261,9 +261,9 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
                 if($callAfterFind)
                         $resource->afterFind();
                 return $resource;
-            }
-            else
-                    return null;
+        }
+        else
+                return null;
     }
 
     /**

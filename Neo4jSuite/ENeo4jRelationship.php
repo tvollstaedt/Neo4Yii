@@ -112,8 +112,8 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     {
             Yii::trace(get_class($this).'.findById()','ext.Neo4jSuite.ENeo4jRelationship');
             $gremlinQuery=new EGremlinScript;
-            $gremlinQuery->setQuery('g.e('.$id.').filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
-            $response=$this->getGraphService()->queryByGremlin($gremlinQuery);
+            $gremlinQuery->setQuery('g.e('.$id.')._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+            $response=$this->getConnection()->queryByGremlin($gremlinQuery);
             $responseData=$response->getData();
             if(isset($responseData[0]))
             {
@@ -153,8 +153,13 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         else
         {
             Yii::trace(get_class($this).' is lazyLoading startNode','ext.Neo4jSuite.ENeo4jRelationship');
-            $response=ENeo4jNode::model()->getRequest(end(explode('/',$this->start)));
-            return $this->_startNode=ENeo4jNode::model()->populateRecord($response->getData());
+            $gremlinQuery=new EGremlinScript;
+            $gremlinQuery->setQuery('g.e('.$this->getId().').outV');
+        
+            $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+            
+            if(isset($responseData[0]))
+                return $this->_startNode=ENeo4jNode::model()->populateRecord($responseData[0]);
         }
     }
 
@@ -169,8 +174,13 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         else
         {
             Yii::trace(get_class($this).' is lazyLoading endNode','ext.Neo4jSuite.ENeo4jRelationship');
-            $response=ENeo4jNode::model()->getRequest(end(explode('/',$this->end)));
-            return $this->_endNode=ENeo4jNode::model()->populateRecord($response->getData());
+            $gremlinQuery=new EGremlinScript;
+            $gremlinQuery->setQuery('g.e('.$this->getId().').inV');
+        
+            $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+            
+            if(isset($responseData[0]))
+                return $this->_endNode=ENeo4jNode::model()->populateRecord($responseData[0]);
         }
     }
 

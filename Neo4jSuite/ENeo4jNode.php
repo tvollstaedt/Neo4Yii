@@ -31,6 +31,18 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     }
     
     /**
+     * Returns the root node
+     * @return ENeo4jNode The root node 
+     */
+    public function getRoot()
+    {
+        Yii::trace('ENeo4jNode.getRoot()','ext.Neo4jSuite.ENeo4jNode');
+        $gremlinQuery=new EGremlinScript;
+        $gremlinQuery->setQuery('g.v(0)');
+        return ENeo4jNode::model()->populateRecord($this->getConnection()->queryByGremlin($gremlinQuery)->getData());
+    }
+    
+    /**
      * Finds a single property container with the specified id within the modelclass index.
      * @param mixed $id The id.
      * @return ENeo4jPropertyContainer the property container found. Null if none is found.
@@ -39,15 +51,12 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     {
             Yii::trace(get_class($this).'.findById()','ext.Neo4jSuite.ENeo4jNode');
             $gremlinQuery=new EGremlinScript;
-            $gremlinQuery->setQuery('g.v('.$id.').filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
-            $response=$this->getGraphService()->queryByGremlin($gremlinQuery)->getData();
-            if(isset($response[0]) && is_array($response[0]))
-            {
-                $model=$this->populateRecords($response);
-                return $model[0];
-            }
-            else
-                return null;
+
+            $gremlinQuery->setQuery('g.v('.$id.')._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+            $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+
+            if(isset($responseData[0]))
+                return ENeo4jNode::model()->populateRecord($responseData[0]);
     }
 
     /**

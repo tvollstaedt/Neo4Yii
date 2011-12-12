@@ -14,6 +14,7 @@ class EGremlinScript
     const GREMLIN_STEP_BACK='back';
     
     private $_scriptString='';
+    private $_params=array();
     
     public function __construct($scriptString='')
     {
@@ -122,6 +123,24 @@ class EGremlinScript
         else
             $this->addStep(self::GREMLIN_STEP_BACK.'("'.$step.'")');
         return $this;
+    }
+    
+    public function hasParams()
+    {
+        if(count($this->getParams())>0)
+                return true;
+        else
+            return false;
+    }
+    
+    public function getParams()
+    {
+        return $this->_params;
+    }
+    
+    public function setParam($param,$value)
+    {
+        $this->_params[$param]=$value;
     }
 }
 ?>

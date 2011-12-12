@@ -2,9 +2,8 @@
 
 class ENeo4jBatchTransaction extends EActiveResource
 {
-
-    private $_graphService;
-
+    private $_connection;
+    
     public $instances=array(); //this is an array of instances used within the transaction
     public $operations=array();
 
@@ -19,19 +18,25 @@ class ENeo4jBatchTransaction extends EActiveResource
     public function rest()
     {
         return CMap::mergeArray(
-            $this->getGraphService()->rest(),
+            $this->getConnection()->rest(),
             array('resource'=>'batch')
         );
     }
-
-    public function getGraphService()
+    
+    public function getConnection()
     {
-        if(isset($this->_graphService))
-                return $this->_graphService;
+        if(isset(self::$_connection))
+                return self::$_connection;
         else
-            return $this->_graphService=new ENeo4jGraphService;
+        {
+            self::$_connection=Yii::app()->getComponent('neo4j');
+            if(self::$_connection instanceof EActiveResourceConnection)
+                return self::$_connection;
+            else
+                throw new EActiveResourceException('No "neo4j" component specified!');
+        }
     }
-
+    
     /**
      * This method is used to collect all instances that are used within a transaction.
      * It is only called internally.
