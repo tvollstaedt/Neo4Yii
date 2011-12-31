@@ -37,9 +37,17 @@ class ENeo4jGraphService extends EActiveResourceConnection
     {
         Yii::trace(get_class($this).'.queryByGremlin()','ext.Neo4jSuite.ENeo4jGraphService');
         
-        return $this->sendRequest($this->getConnectionString().'/ext/GremlinPlugin/graphdb/execute_script', 'POST', array('script'=>$gremlin->toString()));
-                
+        $request=new EActiveResourceRequest;
+        $request->setContentType('application/json');
+        $request->setAcceptType('application/json');
+        $request->setUri($this->getConnectionString().'/ext/GremlinPlugin/graphdb/execute_script');
+        $request->setMethod('POST');
+        $request->setData(array('script'=>$gremlin->toString()));
+        $response=$this->sendRequest($request);
+
+        return $response;
     }
+    
             
 }
 

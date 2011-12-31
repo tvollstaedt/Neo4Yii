@@ -12,10 +12,49 @@
 abstract class ENeo4jPropertyContainer extends EActiveResource
 {    
     public $self; //always contains the full uri. If you need the id use getId() instead.
-    
     public $batchId; //this is used when using the ENeo4jBatchTransaction. Each property container gets an id to be uniquely identified
     
-    private static $_connection;
+    protected static $_connection;
+    
+    /**
+     * Overrides the parent implementation in order to allow setting another MetaData class than EActiveResourceMetaData
+     * @param type $className
+     * @return className 
+     */
+    public static function model($className=__CLASS__)
+    {
+            if(isset(self::$_models[$className]))
+                    return self::$_models[$className];
+            else
+            {
+                    $model=self::$_models[$className]=new $className(null);
+                    $model->_md=new ENeo4jMetaData($model);
+                    $model->attachBehaviors($model->behaviors());
+                    return $model;
+            }
+    }
+    
+    public function routes()
+    {
+        return CMap::mergeArray(
+                parent::routes(),
+                array(
+                    'properties'=>':site/:resource/:id/properties'
+                )
+        );
+    }
+    
+    /**
+     * Overrides EActiveResource getMetaData() to allow defining own MetaData classes
+     * @return ENeo4jMetaData the meta for this ActiveResource class.
+     */
+    public function getMetaData()
+    {
+            if($this->_md!==null)
+                    return $this->_md;
+            else
+                    return $this->_md=self::model(get_class($this))->_md;
+    }
     
     /**
      * Overrides the ActiveResource method.
@@ -30,6 +69,20 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
                     'container'=>'data',
                 )
         );
+    }
+    
+    public function properties()
+    {
+        return CMap::mergeArray(
+            parent::properties(),
+            array(
+                $this->getModelClassField()=>array('type'=>'string'),
+        ));
+    }
+    
+    public function beforeSave() {
+        $this->{$this->getModelClassField()}=get_class($this);
+        return parent::beforeSave();
     }
     
     public function getConnection()
@@ -69,60 +122,6 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
     public function getModelClassField()
     {
         return 'modelclass';
-    }
-
-    /**
-     * Overrides the ActiveResource method to enable usage of the graphService.
-     * @return string the content type as specified in the graph object
-     */
-    public function getContentType()
-    {
-        return $this->getMetaData()->contenttype;
-    }
-
-    /**
-     * Overrides the ActiveResource method to enable usage of the graphService.
-     * @return string the accept type as specified in the graph object
-     */
-    public function getAcceptType()
-    {
-        return $this->getMetaData()->accepttype;
-    }
-
-    /**
-     * Overrides the ActiveResource method to enable usage of the graphService.
-     * @return string the site as specified in the graph object
-     */
-    public function getSite()
-    {
-        return $this->getMetaData()->site;
-    }
-
-    /**
-     * Overrides the ActiveResource method to enable usage of the graphService.
-     * @return string the resource as specified in the graph object
-     */
-    public function getResource()
-    {
-        return $this->getMetaData()->resource;
-    }
-
-    /**
-     * Overrides the ActiveResource method to enable usage of the graphService.
-     * @return string the container as specified in the graph object
-     */
-    public function getContainer()
-    {
-        return $this->getMetaData()->container;
-    }
-
-    /**
-     * Overrides the ActiveResource method to enable usage of the graphService.
-     * @return string the idProperty as specified in the graph object
-     */
-    public function idProperty()
-    {
-        return $this->getMetaData()->idProperty;
     }
 
     /**
@@ -184,7 +183,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
             if($this->beforeSave())
             {
                     Yii::trace(get_class($this).'.update()','ext.Neo4jSuite.ENeo4jPropertyContainer');
-                    $this->updateById($this->getId(),$this->getAttributes($attributes));
+                    $this->updateById($this->getId(),$this->getAttributesToSend($attributes));
                     $this->afterSave();
                     return true;
             }
@@ -204,8 +203,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
             $model=$this->findById($id);
             if($model)
             {
-                $model->putRequest($id,$attributes,'/properties');
-                
+                $model->putRequest('properties',array(),$attributes);
             }
             else
                 throw EActiveResourceException(Yii::t('ext.Neo4jSuite.ENeo4jPropertyContainer','The property container could not be found'));
@@ -222,7 +220,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
             if($model)
                 try
                 {
-                    $model->deleteRequest($id);
+                    $response=$model->deleteRequest('resource');
                 }
                 catch (EActiveResourceRequestException $e)
                 {

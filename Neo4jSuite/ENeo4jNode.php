@@ -12,7 +12,28 @@
  */
 class ENeo4jNode extends ENeo4jPropertyContainer
 {
-
+    const HAS_MANY='HAS_MANY';
+    const HAS_ONE='HAS_ONE';
+    const NODE='ENeo4jNode';
+    const RELATIONSHIP='ENeo4jRelationship';
+    const PATH='ENeo4jPath';
+    
+    private $_related=array();
+    
+    public function __get($name)
+    {
+        if(isset($this->attributes[$name]))
+            return $this->attributes[$name];
+        else if(isset($this->getMetaData()->properties[$name]))
+            return null;
+        else if(isset($this->_related[$name]))
+            return $this->_related[$name];
+        else if(isset($this->getMetaData()->relations[$name]))
+            return $this->getRelated($name);
+        else
+            return parent::__get($name);      
+    }    
+    
     public static function model($className=__CLASS__)
     {
         return parent::model($className);
@@ -30,6 +51,16 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         );
     }
     
+    public function routes()
+    {
+        return CMap::mergeArray(
+                parent::routes(),
+                array(
+                    'relationships'=>':site/:resource/:id/relationships'
+                )
+        );
+    }
+    
     /**
      * Returns the root node
      * @return ENeo4jNode The root node 
@@ -40,6 +71,52 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         $gremlinQuery=new EGremlinScript;
         $gremlinQuery->setQuery('g.v(0)');
         return ENeo4jNode::model()->populateRecord($this->getConnection()->queryByGremlin($gremlinQuery)->getData());
+    }
+    
+    public function relations()
+    {
+        return array();
+    }
+    
+    protected function getRelated($name,$refresh=false)
+    {
+            if(!$refresh && (isset($this->_related[$name]) || array_key_exists($name,$this->_related)))
+                    return $this->_related[$name];
+
+            $relations=$this->getMetaData()->relations;
+            
+            if(!isset($relations[$name]))
+                    throw new ENeo4jException(Yii::t('yii','{class} does not have relation "{name}".',
+                            array('{class}'=>get_class($this), '{name}'=>$name)));
+
+            Yii::trace('lazy loading '.get_class($this).'.'.$name,'ext.Neo4jSuite.ENeo4jNode');
+            $relation=$relations[$name];
+            if($this->getIsNewResource() && !$refresh)
+                    return $relation[0]==self::HAS_ONE ? null : array();
+
+            unset($this->_related[$name]);
+
+            $query=new EGremlinScript;
+            $query->setQuery('g.v('.$this->getId().').'.$relation[2]);
+            
+            $resultData=$this->getConnection()->queryByGremlin($query)->getData();
+            
+            $class=$relation[1];
+            
+            if($relation[0]==self::HAS_ONE && isset($resultData[0]))
+                $this->_related[$name]=$class::model()->populateRecord($resultData[0]);
+            if($relation[0]==self::HAS_MANY && isset($resultData[0]))
+                $this->_related[$name]=$class::model()->populateRecords($resultData);
+
+            if(!isset($this->_related[$name]))
+            {
+                    if($relation[0]==self::HAS_MANY)
+                            $this->_related[$name]=array();
+                    else
+                            $this->_related[$name]=null;
+            }
+
+            return $this->_related[$name];
     }
     
     /**
@@ -56,42 +133,8 @@ class ENeo4jNode extends ENeo4jPropertyContainer
             $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
 
             if(isset($responseData[0]))
-                return ENeo4jNode::model()->populateRecord($responseData[0]);
+                return self::model()->populateRecord($responseData[0]);
     }
-
-    /**
-     * Nodes are created differently to relationships, so we override the ActiveResource method here.
-     * @param array $attributes The attributes to be used when creating the node
-     * @return boolean true on success, false on failure
-     */
-    public function create($attributes=null)
-     {
-        if(!$this->getIsNewResource())
-            throw new EActiveResourceException('The node cannot be inserted because it is not new.');
-        if($this->beforeSave())
-        {
-            Yii::trace(get_class($this).'.create()','ext.Neo4jSuite.ENeo4jNode');
-
-            $response=$this->postRequest(null, $this->getAttributes());
-            
-            $responseData=$response->getData();
-
-            $returnedmodel=$this->populateRecord($response->getData());
-
-            if($returnedmodel)
-            {
-                $id=$this->idProperty();
-                $this->$id=$returnedmodel->getId();
-            }
-
-            $this->afterSave();
-            $this->setIsNewResource(false);
-            $this->setScenario('update');
-            return true;
-
-        }
-        return false;
-     }
 
     /**
      * Returns an array of incoming relationships. You can specify which relationships you want by adding
@@ -144,8 +187,11 @@ class ENeo4jNode extends ENeo4jPropertyContainer
                 $uri.='/'.$types;
         }
         
-        $response=ENeo4jRelationship::model()->customGetRequest($uri);
+        $response=$this->getRequest($uri);
         
+        if($response->hasErrors())
+            $response->throwError();
+                
         return ENeo4jRelationship::model()->populateRecords($response->getData());
     }
 

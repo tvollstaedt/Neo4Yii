@@ -23,6 +23,16 @@ class ENeo4jBatchTransaction extends EActiveResource
         );
     }
     
+    public function routes()
+    {
+        return CMap::mergeArray(
+                parent::routes(),
+                array(
+                    'resource'=>':site/:resource'
+                )
+        );
+    }
+    
     public function getConnection()
     {
         if(isset(self::$_connection))
@@ -166,8 +176,7 @@ class ENeo4jBatchTransaction extends EActiveResource
     public function execute()
     {
         Yii::trace(get_class($this).'.execute()','ext.Neo4jSuite.ENeo4jBatchTransaction');
-        try
-        {
+
             if($this->operations) //if there are any operations, send post request, otherwise ignore it as it would return an error by Neo4j
             {
                 //clean all batchIds of the objects we used during the transaction
@@ -176,7 +185,7 @@ class ENeo4jBatchTransaction extends EActiveResource
                     $instance->assignBatchId(null);
                 }
                 
-                $response=$this->postRequest(null,$this->operations);
+                $response=$this->postRequest('resource',$this->operations);
 
                 foreach($response as $resp)
                 {
@@ -193,11 +202,6 @@ class ENeo4jBatchTransaction extends EActiveResource
                 return $response;
             }
 
-        }
-        catch (EActiveResourceException $e)
-        {
-            throw new ENeo4jTransactionException('Transaction failure '.$e->getMessage(),500);
-        }
     }
    
 

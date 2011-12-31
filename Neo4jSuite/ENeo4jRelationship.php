@@ -13,8 +13,9 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     public $start; //start uri
     public $end; //end uri
     public $type;
-    private $_startNode; //a container for the startNode object. Lazily loaded via __get()
-    private $_endNode; //a container for the endNode object. Lazily loaded via __get()
+    
+    private $_startNode; //a container for the startNode object
+    private $_endNode; //a container for the endNode object
 
     public static function model($className=__CLASS__)
     {
@@ -32,30 +33,6 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             array('resource'=>'relationship')
         );
     }
-
-    /**
-     * Enable lazy loading for start and end nodes
-     */
-    public function __get($name)
-    {
-        if($name=='startNode')
-            return $this->getStartNode();
-        if ($name=='endNode')
-            return $this->getEndNode();
-        else
-            return parent::__get($name);
-    }
-
-    public function __set($name,$value)
-    {
-
-        if($name=='startNode')
-            $this->_startNode=$value;
-        else if ($name=='endNode')
-            $this->_endNode=$value;
-        else
-            parent::__set($name,$value);
-    }
     
     /**
      * Relationships are created differently to nodes, so we override the ActiveResource method here.
@@ -65,24 +42,22 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     public function create($attributes=null)
     {
         if(!$this->getIsNewResource())
-            throw new EActiveResourceException('The relationship cannot be inserted because it is not new.',500);
+            throw new ENeo4jException('The relationship cannot be inserted because it is not new.',500);
 
         //check if one of the vital infos isn't there
-        if($this->endNode->self==null || $this->type==null)
+        if($this->endNode->self==null || $this->type==null || $this->startNode==null)
                 throw new ENeo4jException('You cannot save a relationship without defining type, startNode and endNode',500);
 
         if($this->beforeSave())
         {
             Yii::trace(get_class($this).'.create()','ext.Neo4jSuite.ENeo4jRelationship');
-            
-            $response=$this->customPostRequest(
-                    $this->getSite().'/node/'.$this->getStartNode()->getId().'/relationships',
-                    array(
-                        'to'=>$this->getEndNode()->getId(),
+                        
+            $response=$this->postRequest($this->getSite().'/node/'.$this->startNode->getId().'/relationships',array(),array(
+                        'to'=>$this->endNode->getId(),
                         'type'=>$this->type,
-                        'data'=>$this->getAttributes()
-                    )
-            );
+                        'data'=>$this->getAttributesToSend($attributes)
+                    
+            ));
             
             $responseData=$response->getData();
 
