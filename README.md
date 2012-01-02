@@ -2,11 +2,13 @@
 
 ##STEPS
 
-1. Download the EActiveResource extension and add it to your project (only the import part is needed)
+1. Download my EActiveResource extension (https://github.com/Haensel/ActiveResource)
+and add it to your extensions folder.
 
-2. Download the Neo4Yii extension and configure it this way:
+2. Download the Neo4Yii extension, import EActiveResource and Neo4Yii and configure Neo4Yii this way:
 		
 		  	'import'=>array(
+		  		'ext.EActiveResource.*',
 				'ext.Neo4Yii.*',
         	)
 
