@@ -4,13 +4,13 @@
  * @since version 0.1
  */
 /**
- * Basically the same class as EActiveResourceMetaData but adding relations for Neo4j nodes
+ * Basically the same class as EActiveResourceMetaData but adding traversals for Neo4j nodes
  */
 class ENeo4jMetaData
 {
 
     public $properties;     //The properties of the resource according to the schema configuration
-    public $relations=array();
+    public $traversals=array();
     
     public $attributeDefaults=array();
     
@@ -36,17 +36,17 @@ class ENeo4jMetaData
             }
             
             if($model instanceof ENeo4jNode)
-                foreach($model->relations() as $name=>$config)
-                        $this->addRelation($name,$config);
+                foreach($model->traversals() as $name=>$config)
+                        $this->addTraversal($name,$config);
     }
     
-    public function addRelation($name,$config)
-        {
-                if(isset($config[0],$config[1],$config[2]))
-                        $this->relations[$name]=$config;
-                else
-                        throw new ENeo4jException(Yii::t('ext.','"{class}" has an invalid configuration for relation "{relation}".', array('{class}'=>get_class($this->_model),'{relation}'=>$name)));
-        }
+    public function addTraversal($name,$config)
+    {
+            if(isset($config[0],$config[1],$config[2]))
+                    $this->traversals[$name]=$config;
+            else
+                    throw new ENeo4jException(Yii::t('ext.','"{class}" has an invalid configuration for traversal "{traversal}".', array('{class}'=>get_class($this->_model),'{traversal}'=>$name)));
+    }
     
     public function setProperties($properties)
     {
@@ -56,7 +56,6 @@ class ENeo4jMetaData
            $this->properties[$property]=$propertyObject;
         }
     }
-    
     
     public function getSchema()
     {

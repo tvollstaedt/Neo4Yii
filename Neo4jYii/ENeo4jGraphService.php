@@ -35,7 +35,7 @@ class ENeo4jGraphService extends EActiveResourceConnection
 
     public function queryByGremlin(EGremlinScript $gremlin)
     {
-        Yii::trace(get_class($this).'.queryByGremlin()','ext.Neo4jSuite.ENeo4jGraphService');
+        Yii::trace(get_class($this).'.queryByGremlin()','ext.Neo4jYii.ENeo4jGraphService');
         
         $request=new EActiveResourceRequest;
         $request->setContentType('application/json');

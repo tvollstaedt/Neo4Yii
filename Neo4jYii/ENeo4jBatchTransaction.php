@@ -175,7 +175,7 @@ class ENeo4jBatchTransaction extends EActiveResource
 
     public function execute()
     {
-        Yii::trace(get_class($this).'.execute()','ext.Neo4jSuite.ENeo4jBatchTransaction');
+        Yii::trace(get_class($this).'.execute()','ext.Neo4jYii.ENeo4jBatchTransaction');
 
             if($this->operations) //if there are any operations, send post request, otherwise ignore it as it would return an error by Neo4j
             {

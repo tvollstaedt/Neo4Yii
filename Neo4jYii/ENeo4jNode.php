@@ -18,7 +18,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     const RELATIONSHIP='ENeo4jRelationship';
     const PATH='ENeo4jPath';
     
-    private $_related=array();
+    private $_traversed=array();
     
     public function __get($name)
     {
@@ -26,10 +26,10 @@ class ENeo4jNode extends ENeo4jPropertyContainer
             return $this->attributes[$name];
         else if(isset($this->getMetaData()->properties[$name]))
             return null;
-        else if(isset($this->_related[$name]))
-            return $this->_related[$name];
-        else if(isset($this->getMetaData()->relations[$name]))
-            return $this->getRelated($name);
+        else if(isset($this->_traversed[$name]))
+            return $this->_traversed[$name];
+        else if(isset($this->getMetaData()->traversals[$name]))
+            return $this->getTraversed($name);
         else
             return parent::__get($name);      
     }    
@@ -39,10 +39,6 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         return parent::model($className);
     }
 
-    /**
-     * Get the rest() info of the PropertyContainer and define the resource as "node"
-     * @return <type>
-     */
     public function rest()
     {
         return CMap::mergeArray(
@@ -67,56 +63,61 @@ class ENeo4jNode extends ENeo4jPropertyContainer
      */
     public function getRoot()
     {
-        Yii::trace('ENeo4jNode.getRoot()','ext.Neo4jSuite.ENeo4jNode');
+        Yii::trace('ENeo4jNode.getRoot()','ext.Neo4jYii.ENeo4jNode');
         $gremlinQuery=new EGremlinScript;
         $gremlinQuery->setQuery('g.v(0)');
         return ENeo4jNode::model()->populateRecord($this->getConnection()->queryByGremlin($gremlinQuery)->getData());
     }
     
-    public function relations()
+    /**
+     * Define traversals with the current node as starting point like this
+     * 'traversalName'=>array(self::HAS_ONE,'')
+     * @return type 
+     */
+    public function traversals()
     {
         return array();
     }
     
-    protected function getRelated($name,$refresh=false)
+    protected function getTraversed($name,$refresh=false)
     {
-            if(!$refresh && (isset($this->_related[$name]) || array_key_exists($name,$this->_related)))
-                    return $this->_related[$name];
+            if(!$refresh && (isset($this->_traversed[$name]) || array_key_exists($name,$this->_traversed)))
+                    return $this->_traversed[$name];
 
-            $relations=$this->getMetaData()->relations;
+            $traversals=$this->getMetaData()->traversals;
             
-            if(!isset($relations[$name]))
-                    throw new ENeo4jException(Yii::t('yii','{class} does not have relation "{name}".',
+            if(!isset($traversals[$name]))
+                    throw new ENeo4jException(Yii::t('yii','{class} does not have traversal definition "{name}".',
                             array('{class}'=>get_class($this), '{name}'=>$name)));
 
-            Yii::trace('lazy loading '.get_class($this).'.'.$name,'ext.Neo4jSuite.ENeo4jNode');
-            $relation=$relations[$name];
+            Yii::trace('lazy loading '.get_class($this).'.'.$name,'ext.Neo4jYii.ENeo4jNode');
+            $traversal=$traversals[$name];
             if($this->getIsNewResource() && !$refresh)
-                    return $relation[0]==self::HAS_ONE ? null : array();
+                    return $traversal[0]==self::HAS_ONE ? null : array();
 
-            unset($this->_related[$name]);
+            unset($this->_traversed[$name]);
 
             $query=new EGremlinScript;
-            $query->setQuery('g.v('.$this->getId().').'.$relation[2]);
+            $query->setQuery('g.v('.$this->getId().').'.$traversal[2]);
             
             $resultData=$this->getConnection()->queryByGremlin($query)->getData();
             
-            $class=$relation[1];
+            $class=$traversal[1];
             
-            if($relation[0]==self::HAS_ONE && isset($resultData[0]))
-                $this->_related[$name]=$class::model()->populateRecord($resultData[0]);
-            if($relation[0]==self::HAS_MANY && isset($resultData[0]))
-                $this->_related[$name]=$class::model()->populateRecords($resultData);
+            if($traversal[0]==self::HAS_ONE && isset($resultData[0]))
+                $this->_traversed[$name]=$class::model()->populateRecord($resultData[0]);
+            if($traversal[0]==self::HAS_MANY && isset($resultData[0]))
+                $this->_traversed[$name]=$class::model()->populateRecords($resultData);
 
-            if(!isset($this->_related[$name]))
+            if(!isset($this->_traversed[$name]))
             {
-                    if($relation[0]==self::HAS_MANY)
-                            $this->_related[$name]=array();
+                    if($traversal[0]==self::HAS_MANY)
+                            $this->_traversed[$name]=array();
                     else
-                            $this->_related[$name]=null;
+                            $this->_traversed[$name]=null;
             }
 
-            return $this->_related[$name];
+            return $this->_traversed[$name];
     }
     
     /**
@@ -126,14 +127,17 @@ class ENeo4jNode extends ENeo4jPropertyContainer
      */
     public function findById($id)
     {
-            Yii::trace(get_class($this).'.findById()','ext.Neo4jSuite.ENeo4jNode');
-            $gremlinQuery=new EGremlinScript;
+        if($id===null)
+            throw new ENeo4jException ('Id missing!', 500);
 
-            $gremlinQuery->setQuery('g.v('.$id.')._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
-            $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+        Yii::trace(get_class($this).'.findById()','ext.Neo4jYii.ENeo4jNode');
+        $gremlinQuery=new EGremlinScript;
 
-            if(isset($responseData[0]))
-                return self::model()->populateRecord($responseData[0]);
+        $gremlinQuery->setQuery('g.v('.$id.')._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+
+        if(isset($responseData[0]))
+            return self::model()->populateRecord($responseData[0]);
     }
 
     /**
@@ -143,7 +147,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
      * @param string $types The types you want to get
      * @return array An array of ENeo4jRelationship objects
      */
-    public function incoming($types=null)
+    public function inRelationships($types=null)
     {
         return $this->getRelationships($types,$direction='in');
     }
@@ -155,7 +159,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
      * @param string $types The types you want to get
      * @return array An array of ENeo4jRelationship objects
      */
-    public function outgoing($types=null)
+    public function outRelationships($types=null)
     {
         return $this->getRelationships($types,$direction='out');
 
@@ -172,7 +176,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
      */
     public function getRelationships($types=null,$direction='all')
     {
-        Yii::trace(get_class($this).'.getRelationships()','ext.Neo4jSuite.ENeo4jNode');
+        Yii::trace(get_class($this).'.getRelationships()','ext.Neo4jYii.ENeo4jNode');
         $uri=$this->getSite().'/'.$this->getResource().'/'.$this->getId().'/relationships';
         if($direction)
             $uri.='/'.$direction;
@@ -198,18 +202,22 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     /**
      * Add a relationship to another node
      * @param ENeo4jNode $node The node object to connect with (will be the endNode of the relationship)
-     * @param string $type The type of this relationship. something like 'HAS_NAME'
+     * @param string $type The type of this relationship. something like 'HAS_NAME'. If this is the name of an existing relationship class this class will be instantiated, if not ENeo4jRelationship will be used
      * @param array $properties An array of properties used for the relationship. e.g.: array('since'=>'2010')
      */
     public function addRelationshipTo(ENeo4jNode $node,$type,$properties=null)
     {
-        Yii::trace(get_class($this).'.addRelationshipTo()','ext.Neo4jSuite.ENeo4jNode');
-        $relationship=new ENeo4jRelationship;
-        $relationship->setStartNode($this);
-        $relationship->setEndNode($node);
-        $relationship->type=$type;
-        $relationship->setAttributes($properties,false);
-        $relationship->save();
+        Yii::trace(get_class($this).'.addRelationshipTo()','ext.Neo4jYii.ENeo4jNode');
+        
+            $relationship=new $type;
+            if(!$relationship instanceof ENeo4jRelationship)
+                throw new ENeo4jException('Class is not an instance of ENeo4jRelationship',500);
+            
+            $relationship->setAttributes($properties);
+            $relationship->setStartNode($this);
+            $relationship->setEndNode($node);
+            $relationship->save();
+        
     }
 
 }
