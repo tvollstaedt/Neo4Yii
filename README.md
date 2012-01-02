@@ -23,14 +23,11 @@
                     'queryCacheID'=>'cache',
                 ),
 
-3. Usage
+##Usage
 
-Example: We want to have nodes that are Persons which are related with relationships of type
-_FRIEND_. Some of these friends are old friends (friends >5 years) and some are friends of friends
-Here is how you would do that
+Example:
 
 ~~~
-[php]
 class Person extends ENeo4jNode
 {
     public static function model($className=__CLASS__)
@@ -68,7 +65,6 @@ class Person extends ENeo4jNode
 ~~~
 
 ~~~
-[php]
 class _FRIEND_ extends ENeo4jRelationship
 {
     public static function model($className = __CLASS__) {
@@ -93,7 +89,6 @@ class _FRIEND_ extends ENeo4jRelationship
 ~~~
 
 ~~~
-[php]
 			$haensel=new Person;
             
             $haensel->attributes=array(
@@ -158,4 +153,4 @@ class _FRIEND_ extends ENeo4jRelationship
 			friends of Haensels friends:
 			Susans Friend
             */
-~~
+~~~
