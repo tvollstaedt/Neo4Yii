@@ -28,7 +28,7 @@ and add it to your extensions folder.
 ##Usage
 
 Example:
-Persons have friends which themselves can also have friends (via relationship _FRIEND_).
+Persons have friends which themselves can also have friends (via relationship "_FRIEND_").
 Each friendship can be defined with the property "forYears". e.g.:Old friends know each other
 for more than 5 years. Here is an example of how to use Neo4Yii in such a case.
 
