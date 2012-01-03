@@ -28,7 +28,7 @@ and add it to your extensions folder.
 ##Usage
 
 Example:
-Persons have friends which themselves can also have friends (via relationship a friend relationship).
+Persons have friends which themselves can also have friends (via a friend relationship).
 Each friendship can be defined with the property "forYears". e.g.:Old friends know each other
 for more than 5 years. Here is an example of how to use Neo4Yii in such a case.
 
@@ -64,6 +64,7 @@ class Person extends ENeo4jNode
         return array(
             'friends'=>array(self::HAS_MANY,self::NODE,'out("friend")'),
             'fof'=>array(self::HAS_MANY,self::NODE,'out("friend").out("friend")')
+            'oldFriends'=>array(self::HAS_MANY,self::NODE,'outE("_FRIEND_").filter{it.forYears>5}.inV'),
         );
     }
 }
@@ -149,7 +150,7 @@ class _FRIEND_ extends ENeo4jRelationship
             foreach($haensel->fof as $fof)
                 echo $fof->name .' '.$fof->surname.'<br>';
                 
-            /*
+            /* OUTPUT
             Haensels friends:
 			Bill Brown
 			Susan Scissors
