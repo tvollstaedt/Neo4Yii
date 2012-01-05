@@ -70,9 +70,12 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     }
     
     /**
-     * Define traversals with the current node as starting point like this
-     * 'traversalName'=>array(self::HAS_ONE,'')
-     * @return type 
+     * Define simple traversals with the current node as starting point like this
+     * 'traversalName'=>array(self::[HAS_ONE|HAS_MANY],self::[NODE|RELATIONSHIP],'out.in.filter{it.name=="A property value"}')
+     * where HAS_ONE expects a single object to be returned while HAS_MANY expects an array of objects ro be returned.
+     * Define the expected returntype via NODE or RELATIONSHIP. The third parameter is a gremlin script that will be added to "g.v(currentNodeId)." to only allow traversals
+     * with the current node as a starting point.
+     * @return array An array with the defined traversal configurations
      */
     public function traversals()
     {
@@ -138,6 +141,21 @@ class ENeo4jNode extends ENeo4jPropertyContainer
 
         if(isset($responseData[0]))
             return self::model()->populateRecord($responseData[0]);
+    }
+    
+    /**
+     * Finds all models of the named class via gremlin iterator g.V
+     * @return array An array of model objects, empty if none are found
+     */
+    public function findAll()
+    {
+        Yii::trace(get_class($this).'.findAll()','ext.Neo4jYii.ENeo4jNode');
+        $gremlinQuery=new EGremlinScript;
+
+        $gremlinQuery->setQuery('g.V._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+
+        return self::model()->populateRecords($responseData);
     }
 
     /**

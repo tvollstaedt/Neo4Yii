@@ -107,6 +107,21 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             else
                 return null;
     }
+    
+    /**
+     * Finds all models of the named class via gremlin iterator g.E
+     * @return array An array of model objects, empty if none are found
+     */
+    public function findAll()
+    {
+        Yii::trace(get_class($this).'.findAll()','ext.Neo4jYii.ENeo4jRelationship');
+        $gremlinQuery=new EGremlinScript;
+
+        $gremlinQuery->setQuery('g.E._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+
+        return self::model()->populateRecords($responseData);
+    }
 
     /**
      * Setter for the startNode object
