@@ -8,8 +8,9 @@ and add it to your extensions folder.
 2. Download the Neo4Yii extension, import EActiveResource and Neo4Yii and configure Neo4Yii this way:
 		
 		  	'import'=>array(
-		  		'ext.EActiveResource.*',
-				'ext.Neo4Yii.*',
+		  		/* ..import stuff... */
+		  		'application.extensions.EActiveResource.*',
+                'application.extensions.Neo4Yii.*',
         	)
 
           	'neo4j'=>array(
@@ -62,9 +63,9 @@ class Person extends ENeo4jNode
     public function traversals()
     {
         return array(
-            'friends'=>array(self::HAS_MANY,self::NODE,'out("friend")'),
-            'fof'=>array(self::HAS_MANY,self::NODE,'out("friend").out("friend")')
-            'oldFriends'=>array(self::HAS_MANY,self::NODE,'outE("_FRIEND_").filter{it.forYears>5}.inV'),
+            'friends'=>array(self::HAS_MANY,self::NODE,'out("_FRIEND_")'),
+            'fof'=>array(self::HAS_MANY,self::NODE,'out("_FRIEND_").out("_FRIEND_")'),
+            'oldFriends'=>array(self::HAS_MANY,self::NODE,'outE("_FRIEND_").filter{it.forYears>5}.inV')
         );
     }
 }
