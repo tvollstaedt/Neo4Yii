@@ -63,7 +63,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
      */
     public function getRoot()
     {
-        Yii::trace('ENeo4jNode.getRoot()','ext.Neo4jYii.ENeo4jNode');
+        Yii::trace('ENeo4jNode.getRoot()','ext.Neo4Yii.ENeo4jNode');
         $gremlinQuery=new EGremlinScript;
         $gremlinQuery->setQuery('g.v(0)');
         return ENeo4jNode::model()->populateRecord($this->getConnection()->queryByGremlin($gremlinQuery)->getData());
@@ -93,7 +93,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
                     throw new ENeo4jException(Yii::t('yii','{class} does not have traversal definition "{name}".',
                             array('{class}'=>get_class($this), '{name}'=>$name)));
 
-            Yii::trace('lazy loading '.get_class($this).'.'.$name,'ext.Neo4jYii.ENeo4jNode');
+            Yii::trace('lazy loading '.get_class($this).'.'.$name,'ext.Neo4Yii.ENeo4jNode');
             $traversal=$traversals[$name];
             if($this->getIsNewResource() && !$refresh)
                     return $traversal[0]==self::HAS_ONE ? null : array();
@@ -133,7 +133,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         if($id===null)
             throw new ENeo4jException ('Id missing!', 500);
 
-        Yii::trace(get_class($this).'.findById()','ext.Neo4jYii.ENeo4jNode');
+        Yii::trace(get_class($this).'.findById()','ext.Neo4Yii.ENeo4jNode');
         $gremlinQuery=new EGremlinScript;
 
         $gremlinQuery->setQuery('g.v('.$id.')._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
@@ -149,7 +149,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
      */
     public function findAll()
     {
-        Yii::trace(get_class($this).'.findAll()','ext.Neo4jYii.ENeo4jNode');
+        Yii::trace(get_class($this).'.findAll()','ext.Neo4Yii.ENeo4jNode');
         $gremlinQuery=new EGremlinScript;
 
         $gremlinQuery->setQuery('g.V._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
@@ -194,7 +194,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
      */
     public function getRelationships($types=null,$direction='all')
     {
-        Yii::trace(get_class($this).'.getRelationships()','ext.Neo4jYii.ENeo4jNode');
+        Yii::trace(get_class($this).'.getRelationships()','ext.Neo4Yii.ENeo4jNode');
         $uri=$this->getSite().'/'.$this->getResource().'/'.$this->getId().'/relationships';
         if($direction)
             $uri.='/'.$direction;
@@ -225,7 +225,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
      */
     public function addRelationshipTo(ENeo4jNode $node,$type,$properties=null)
     {
-        Yii::trace(get_class($this).'.addRelationshipTo()','ext.Neo4jYii.ENeo4jNode');
+        Yii::trace(get_class($this).'.addRelationshipTo()','ext.Neo4Yii.ENeo4jNode');
         
             $relationship=new $type;
             if(!$relationship instanceof ENeo4jRelationship)

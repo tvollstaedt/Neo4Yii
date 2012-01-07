@@ -59,7 +59,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
 
         if($this->beforeSave())
         {
-            Yii::trace(get_class($this).'.create()','ext.Neo4jYii.ENeo4jRelationship');
+            Yii::trace(get_class($this).'.create()','ext.Neo4Yii.ENeo4jRelationship');
                         
             $response=$this->postRequest($this->getSite().'/node/'.$this->startNode->getId().'/relationships',array(),array(
                         'to'=>$this->endNode->getId(),
@@ -94,7 +94,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function findById($id)
     {
-            Yii::trace(get_class($this).'.findById()','ext.Neo4jYii.ENeo4jRelationship');
+            Yii::trace(get_class($this).'.findById()','ext.Neo4Yii.ENeo4jRelationship');
             $gremlinQuery=new EGremlinScript;
             $gremlinQuery->setQuery('g.e('.$id.')._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
             $response=$this->getConnection()->queryByGremlin($gremlinQuery);
@@ -114,7 +114,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function findAll()
     {
-        Yii::trace(get_class($this).'.findAll()','ext.Neo4jYii.ENeo4jRelationship');
+        Yii::trace(get_class($this).'.findAll()','ext.Neo4Yii.ENeo4jRelationship');
         $gremlinQuery=new EGremlinScript;
 
         $gremlinQuery->setQuery('g.E._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
@@ -151,7 +151,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             return $this->_startNode;
         else
         {
-            Yii::trace(get_class($this).' is lazyLoading startNode','ext.Neo4jYii.ENeo4jRelationship');
+            Yii::trace(get_class($this).' is lazyLoading startNode','ext.Neo4Yii.ENeo4jRelationship');
             $gremlinQuery=new EGremlinScript;
             $gremlinQuery->setQuery('g.e('.$this->getId().').outV');
         
@@ -172,7 +172,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             return $this->_endNode;
         else
         {
-            Yii::trace(get_class($this).' is lazyLoading endNode','ext.Neo4jYii.ENeo4jRelationship');
+            Yii::trace(get_class($this).' is lazyLoading endNode','ext.Neo4Yii.ENeo4jRelationship');
             $gremlinQuery=new EGremlinScript;
             $gremlinQuery->setQuery('g.e('.$this->getId().').inV');
         

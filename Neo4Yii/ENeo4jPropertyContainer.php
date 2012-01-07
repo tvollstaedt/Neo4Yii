@@ -179,10 +179,10 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
     {
 
             if($this->getIsNewResource())
-                    throw new EActiveResourceException(Yii::t('ext.Neo4jYii.ENeo4jPropertyContainer','The PropertyContainer cannot be updated because it is new.'));
+                    throw new EActiveResourceException(Yii::t('ext.Neo4Yii.ENeo4jPropertyContainer','The PropertyContainer cannot be updated because it is new.'));
             if($this->beforeSave())
             {
-                    Yii::trace(get_class($this).'.update()','ext.Neo4jYii.ENeo4jPropertyContainer');
+                    Yii::trace(get_class($this).'.update()','ext.Neo4Yii.ENeo4jPropertyContainer');
                     $this->updateById($this->getId(),$this->getAttributesToSend($attributes));
                     $this->afterSave();
                     return true;
@@ -199,14 +199,14 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
      */
     public function updateById($id,$attributes)
     {
-            Yii::trace(get_class($this).'.updateById()','ext.Neo4jYii.ENeo4jPropertyContainer');
+            Yii::trace(get_class($this).'.updateById()','ext.Neo4Yii.ENeo4jPropertyContainer');
             $model=$this->findById($id);
             if($model)
             {
                 $model->putRequest('properties',array(),$attributes);
             }
             else
-                throw EActiveResourceException(Yii::t('ext.Neo4jYii.ENeo4jPropertyContainer','The property container could not be found'));
+                throw EActiveResourceException(Yii::t('ext.Neo4Yii.ENeo4jPropertyContainer','The property container could not be found'));
     }
 
     /**
@@ -215,7 +215,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
      */
     public function deleteById($id)
     {
-            Yii::trace(get_class($this).'.deleteById()','ext.Neo4jYii.ENeo4jPropertyContainer');
+            Yii::trace(get_class($this).'.deleteById()','ext.Neo4Yii.ENeo4jPropertyContainer');
             $model=$this->findById($id);
             if($model)
                 try
