@@ -15,14 +15,9 @@ and add it to your extensions folder.
 
           	'neo4j'=>array(
                     'class'=>'ENeo4jGraphService',
-                    'resources'=>array(
-                        'ENeo4jGraphService'=>array(
-                            'site'=>'192.168.2.10:7474/db/data',
-                            'idProperty'=>'id',
-                            'contenttype'=>'application/json',
-                            'accepttype'=>'application/json',
-                        ),
-                    ),
+                    'host'=>'192.168.2.10',
+                    'port'=>'7474',
+                    'db'=>'db/data',
                     'queryCacheID'=>'cache',
                 ),
 

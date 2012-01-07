@@ -11,10 +11,21 @@
  * mess around with it unless you know what you are doing
  */
 class ENeo4jGraphService extends EActiveResourceConnection
-{             
+{      
+    
+    public $host;
+    public $port;
+    public $db;
+    
     public function rest()
     {
-        return $this->getResourceConfiguration(get_class($this));
+        return array(
+            'site'=>$this->host.':'.$this->port.'/'.$this->db,
+            'accepttype'=>'application/json',
+            'contenttype'=>'application/json',
+            'idProperty'=>'id',
+            'resource'=>'',
+        );
     }
     
     public function getConnectionString()
@@ -26,11 +37,6 @@ class ENeo4jGraphService extends EActiveResourceConnection
     public function createBatchTransaction()
     {
         return new ENeo4jBatchTransaction($this);
-    }
-
-    public function queryByCypher($cypher)
-    {
-        
     }
 
     public function queryByGremlin(EGremlinScript $gremlin)

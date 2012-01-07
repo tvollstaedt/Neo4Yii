@@ -70,7 +70,7 @@ class ENeo4jPath
                     $path->addPropertyContainer(ENeo4jNode::model()->populateRecord($propertyContainer));
                 //is a relationship
                 if(strpos($propertyContainer['self'],'/relationship/')>0)
-                    $path->addPropertyContainer(ENeo4jNode::model()->populateRecord($propertyContainer));
+                    $path->addPropertyContainer(ENeo4jRelationship::model()->populateRecord($propertyContainer));
             }
         }
         return $path;
