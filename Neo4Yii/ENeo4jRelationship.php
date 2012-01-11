@@ -12,23 +12,23 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
 {
     public $start; //start uri
     public $end; //end uri
-    public $type;
-    
+
     private $_startNode; //a container for the startNode object
     private $_endNode; //a container for the endNode object
+    private $_type;
 
     public static function model($className=__CLASS__)
     {
         return parent::model($className);
     }
-    
+
     /**
      * Sets the type according to the classname
      */
     public function init()
     {
         parent::init();
-        $this->type=get_class($this);
+        $this->_type=get_class($this);
     }
 
     /**
@@ -42,7 +42,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             array('resource'=>'relationship')
         );
     }
-    
+
     /**
      * Relationships are created differently to nodes, so we override the ActiveResource method here.
      * @param array $attributes The attributes to be used when creating the relationship
@@ -60,14 +60,14 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         if($this->beforeSave())
         {
             Yii::trace(get_class($this).'.create()','ext.Neo4Yii.ENeo4jRelationship');
-                        
+
             $response=$this->postRequest($this->getSite().'/node/'.$this->startNode->getId().'/relationships',array(),array(
                         'to'=>$this->endNode->getId(),
-                        'type'=>$this->type,
+                        'type'=>$this->_type,
                         'data'=>$this->getAttributesToSend($attributes)
-                    
+
             ));
-            
+
             $responseData=$response->getData();
 
             $returnedmodel=$this->populateRecord($response->getData());
@@ -107,7 +107,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             else
                 return null;
     }
-    
+
     /**
      * Finds all models of the named class via gremlin iterator g.E
      * @return array An array of model objects, empty if none are found
@@ -154,9 +154,9 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             Yii::trace(get_class($this).' is lazyLoading startNode','ext.Neo4Yii.ENeo4jRelationship');
             $gremlinQuery=new EGremlinScript;
             $gremlinQuery->setQuery('g.e('.$this->getId().').outV');
-        
+
             $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
-            
+
             if(isset($responseData[0]))
                 return $this->_startNode=ENeo4jNode::model()->populateRecord($responseData[0]);
         }
@@ -175,9 +175,9 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             Yii::trace(get_class($this).' is lazyLoading endNode','ext.Neo4Yii.ENeo4jRelationship');
             $gremlinQuery=new EGremlinScript;
             $gremlinQuery->setQuery('g.e('.$this->getId().').inV');
-        
+
             $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
-            
+
             if(isset($responseData[0]))
                 return $this->_endNode=ENeo4jNode::model()->populateRecord($responseData[0]);
         }
