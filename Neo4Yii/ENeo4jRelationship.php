@@ -54,7 +54,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             throw new ENeo4jException('The relationship cannot be inserted because it is not new.',500);
 
         //check if one of the vital infos isn't there
-        if($this->endNode->self==null || $this->type==null || $this->startNode==null)
+        if($this->endNode->self==null || $this->_type==null || $this->startNode==null)
                 throw new ENeo4jException('You cannot save a relationship without defining type, startNode and endNode',500);
 
         if($this->beforeSave())
