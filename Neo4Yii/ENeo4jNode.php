@@ -17,9 +17,9 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     const NODE='ENeo4jNode';
     const RELATIONSHIP='ENeo4jRelationship';
     const PATH='ENeo4jPath';
-    
+
     private $_traversed=array();
-    
+
     public function __get($name)
     {
         if(isset($this->attributes[$name]))
@@ -31,9 +31,9 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         else if(isset($this->getMetaData()->traversals[$name]))
             return $this->getTraversed($name);
         else
-            return parent::__get($name);      
-    }    
-    
+            return parent::__get($name);
+    }
+
     public static function model($className=__CLASS__)
     {
         return parent::model($className);
@@ -46,7 +46,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
             array('resource'=>'node')
         );
     }
-    
+
     public function routes()
     {
         return CMap::mergeArray(
@@ -56,10 +56,10 @@ class ENeo4jNode extends ENeo4jPropertyContainer
                 )
         );
     }
-    
+
     /**
      * Returns the root node
-     * @return ENeo4jNode The root node 
+     * @return ENeo4jNode The root node
      */
     public function getRoot()
     {
@@ -68,7 +68,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         $gremlinQuery->setQuery('g.v(0)');
         return ENeo4jNode::model()->populateRecord($this->getConnection()->queryByGremlin($gremlinQuery)->getData());
     }
-    
+
     /**
      * Define simple traversals with the current node as starting point like this
      * 'traversalName'=>array(self::[HAS_ONE|HAS_MANY],self::[NODE|RELATIONSHIP],'out.in.filter{it.name=="A property value"}')
@@ -81,14 +81,14 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     {
         return array();
     }
-    
+
     protected function getTraversed($name,$refresh=false)
     {
             if(!$refresh && (isset($this->_traversed[$name]) || array_key_exists($name,$this->_traversed)))
                     return $this->_traversed[$name];
 
             $traversals=$this->getMetaData()->traversals;
-            
+
             if(!isset($traversals[$name]))
                     throw new ENeo4jException(Yii::t('yii','{class} does not have traversal definition "{name}".',
                             array('{class}'=>get_class($this), '{name}'=>$name)));
@@ -102,11 +102,11 @@ class ENeo4jNode extends ENeo4jPropertyContainer
 
             $query=new EGremlinScript;
             $query->setQuery('g.v('.$this->getId().').'.$traversal[2]);
-            
+
             $resultData=$this->getConnection()->queryByGremlin($query)->getData();
-            
+
             $class=$traversal[1];
-            
+
             if($traversal[0]==self::HAS_ONE && isset($resultData[0]))
                 $this->_traversed[$name]=$class::model()->populateRecord($resultData[0]);
             if($traversal[0]==self::HAS_MANY && isset($resultData[0]))
@@ -122,7 +122,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
 
             return $this->_traversed[$name];
     }
-    
+
     /**
      * Finds a single property container with the specified id within the modelclass index.
      * @param mixed $id The id.
@@ -142,7 +142,78 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         if(isset($responseData[0]))
             return self::model()->populateRecord($responseData[0]);
     }
-    
+
+    /**
+     * Returns gremlin filter syntax based on given attribute key/value pair
+     * @param array $attributes
+     * @return string the resulting filter string
+     */
+    private function getFilterByAttributes(&$attributes)
+    {
+        Yii::trace(get_class($this).'.getFilterByAttributes()','ext.Neo4Yii.ENeo4jNode');
+        $filter = "";
+        foreach($attributes as $key=>$value) {
+            if(!is_numeric($value)) {
+                $value = '"' . $value . '"';
+            }
+            $filter .= ".filter{it.$key == $value}";
+        }
+
+        return (empty($filter) ? false : $filter);
+    }
+
+    /**
+     * Find a single property container with the specified attributes within the modelclass index.
+     * @param type $attributes
+     * @return type
+     */
+    public function findByAttributes($attributes)
+    {
+        Yii::trace(get_class($this).'.findByAttributes()','ext.Neo4Yii.ENeo4jNode');
+        $gremlinQuery=new EGremlinScript;
+
+        $gremlinQuery->setQuery('g.V' . $this->getFilterByAttributes($attributes) .
+                '.filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+
+        if(isset($responseData[0]))
+            return self::model()->populateRecord($responseData[0]);
+        else
+            return null;
+    }
+
+    /**
+     * Find all models of the named class via gremlin query
+     * @param type $attributes
+     * @param array An array of model objects, empty if none are found
+     */
+    public function findAllByAttributes($attributes)
+    {
+        Yii::trace(get_class($this).'.findAllByAttributes()','ext.Neo4Yii.ENeo4jNode');
+        $gremlinQuery=new EGremlinScript;
+
+        $gremlinQuery->setQuery('g.V' . $this->getFilterByAttributes($attributes) .
+                '.filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+
+        return self::model()->populateRecords($responseData);
+    }
+
+    /**
+     * Find all models of the named class via custom gremlin query
+     * @param type $query
+     */
+    public function findAllByQuery($query)
+    {
+        Yii::trace(get_class($this).'.findAllByQuery()','ext.Neo4Yii.ENeo4jNode');
+        $gremlinQuery=new EGremlinScript;
+
+        $gremlinQuery->setQuery($query. '.filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+
+        return self::model()->populateRecords($responseData);
+    }
+
     /**
      * Finds all models of the named class via gremlin iterator g.V
      * @return array An array of model objects, empty if none are found
@@ -208,12 +279,12 @@ class ENeo4jNode extends ENeo4jPropertyContainer
             else
                 $uri.='/'.$types;
         }
-        
+
         $response=$this->getRequest($uri);
-        
+
         if($response->hasErrors())
             $response->throwError();
-                
+
         return ENeo4jRelationship::model()->populateRecords($response->getData());
     }
 
@@ -226,16 +297,16 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     public function addRelationshipTo(ENeo4jNode $node,$type,$properties=null)
     {
         Yii::trace(get_class($this).'.addRelationshipTo()','ext.Neo4Yii.ENeo4jNode');
-        
+
             $relationship=new $type;
             if(!$relationship instanceof ENeo4jRelationship)
                 throw new ENeo4jException('Class is not an instance of ENeo4jRelationship',500);
-            
+
             $relationship->setAttributes($properties);
             $relationship->setStartNode($this);
             $relationship->setEndNode($node);
             $relationship->save();
-        
+
     }
 
 }
