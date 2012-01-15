@@ -19,6 +19,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     const PATH='ENeo4jPath';
 
     private $_traversed=array();
+    protected static $_models=array();
 
     public function __get($name)
     {
@@ -36,7 +37,14 @@ class ENeo4jNode extends ENeo4jPropertyContainer
 
     public static function model($className=__CLASS__)
     {
-        return parent::model($className);
+            if(isset(self::$_models[$className]))
+                return self::$_models[$className];
+            else
+            {
+                $model=self::$_models[$className]=new $className(null);
+                $model->attachBehaviors($model->behaviors());
+                return $model;
+            }
     }
 
     public function rest()
@@ -153,7 +161,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         Yii::trace(get_class($this).'.getFilterByAttributes()','ext.Neo4Yii.ENeo4jNode');
         $filter = "";
         foreach($attributes as $key=>$value) {
-            if(!is_numeric($value)) {
+            if(!is_int($value)) {
                 $value = '"' . $value . '"';
             }
             $filter .= ".filter{it.$key == $value}";
